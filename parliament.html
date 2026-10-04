@@ -16,7 +16,6 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom scrollbars */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -39,7 +38,6 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        // Custom Initial Presets
         const PRESETS = {
             empty: {
                 name: "Empty / Start from Scratch",
@@ -84,19 +82,15 @@
         };
 
         function App() {
-            // App Settings
             const [darkMode, setDarkMode] = useState(true);
             const [activeTab, setActiveTab] = useState('parties');
-            const [layoutStyle, setLayoutStyle] = useState('semicircle'); // semicircle, westminster, classroom, fullcircle
-
-            // Parties State
+            const [layoutStyle, setLayoutStyle] = useState('semicircle');
             const [parties, setParties] = useState(PRESETS.demo100.parties);
+            const [targetSeatsInput, setTargetSeatsInput] = useState("100");
 
             const totalSeats = useMemo(() => {
                 return parties.reduce((sum, p) => sum + p.seats, 0);
             }, [parties]);
-
-            const [targetSeatsInput, setTargetSeatsInput] = useState("100");
 
             useEffect(() => {
                 if (totalSeats > 0) {
@@ -104,14 +98,12 @@
                 }
             }, [totalSeats]);
 
-            // Geometry Sliders
             const [numRows, setNumRows] = useState(5);
             const [paddingAngle, setPaddingAngle] = useState(5);
             const [seatRadius, setSeatRadius] = useState(9);
             const [innerRadius, setInnerRadius] = useState(150);
             const [outerRadius, setOuterRadius] = useState(300);
 
-            // UI state
             const [selectedParties, setSelectedParties] = useState(new Set());
             const [hoveredParty, setHoveredParty] = useState(null);
             const [hoveredSeat, setHoveredSeat] = useState(null);
@@ -120,7 +112,6 @@
                 return totalSeats > 0 ? Math.floor(totalSeats / 2) + 1 : 0;
             }, [totalSeats]);
 
-            // Sync Dark Mode Classes
             useEffect(() => {
                 if (darkMode) {
                     document.documentElement.classList.add('dark');
@@ -131,7 +122,6 @@
                 }
             }, [darkMode]);
 
-            // Auto Scaler (Hamilton Method)
             const handleScaleTotalSeats = (newTarget) => {
                 const target = parseInt(newTarget);
                 if (isNaN(target) || target < 1 || parties.length === 0) return;
@@ -187,7 +177,6 @@
                 }
             };
 
-            // Preset loader
             const loadPreset = (presetKey) => {
                 const target = PRESETS[presetKey];
                 if (target) {
@@ -198,26 +187,24 @@
                 }
             };
 
-            // Party handlers
             const addParty = () => {
                 const newId = Date.now().toString();
                 const colors = ['#EF4444', '#3B82F6', '#10B981', '#FACC15', '#EC4899', '#8B5CF6', '#F97316', '#06B6D4'];
                 const randomColor = colors[parties.length % colors.length];
-                const newParties = [...parties, {
+                setParties([...parties, {
                     id: newId,
                     name: `Party ${parties.length + 1}`,
                     seats: 15,
                     color: randomColor,
-                    description: 'Faction / Spectrum Member'
-                }];
-                setParties(newParties);
+                    description: 'Faction Member'
+                }]);
             };
 
             const deleteParty = (id) => {
                 setParties(parties.filter(p => p.id !== id));
-                const newSelection = new Set(selectedParties);
-                newSelection.delete(id);
-                setSelectedParties(newSelection);
+                const nextSelection = new Set(selectedParties);
+                nextSelection.delete(id);
+                setSelectedParties(nextSelection);
             };
 
             const updateParty = (id, field, value) => {
@@ -240,7 +227,6 @@
                 setSelectedParties(next);
             };
 
-            // COORDINATE MATH ENGINE FOR DIFFERENT LAYOUTS
             const seats = useMemo(() => {
                 if (totalSeats === 0) return [];
                 const generatedSeats = [];
@@ -323,11 +309,7 @@
                         }
                     });
 
-                    generatedSeats.sort((a, b) => {
-                        let normA = a.angle < 0 ? a.angle + 2 * Math.PI : a.angle;
-                        let normB = b.angle < 0 ? b.angle + 2 * Math.PI : b.angle;
-                        return normA - normB;
-                    });
+                    generatedSeats.sort((a, b) => a.angle - b.angle);
 
                 } else if (layoutStyle === 'classroom') {
                     const totalGridSeats = totalSeats;
@@ -395,7 +377,6 @@
                     generatedSeats.sort((a, b) => a.x - b.x);
                 }
 
-                // Assign ordered seats to customized parties sequentially
                 let seatCounter = 0;
                 parties.forEach(party => {
                     for (let i = 0; i < party.seats; i++) {
@@ -410,7 +391,6 @@
                 return generatedSeats;
             }, [parties, totalSeats, numRows, paddingAngle, innerRadius, outerRadius, layoutStyle]);
 
-            // Selected coalition total
             const coalitionSeatsTotal = useMemo(() => {
                 return parties
                     .filter(p => selectedParties.has(p.id))
@@ -419,7 +399,6 @@
 
             return (
                 <div className="flex flex-col min-h-screen">
-                    {/* Top Navbar */}
                     <header className="border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <a href="index.html" className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
@@ -433,4 +412,15 @@
                                 className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
                                 {darkMode ? '☀️ Light' : '🌙 Dark'}
                             </button>
-                      
+                        </div>
+                    </header>
+
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+                        <div className="lg:col-span-4 flex flex-col gap-6 bg-white dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 block">
+                                    Presets
+                                </label>
+                                <select 
+                                    onChange={(e) => loadPreset(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring
