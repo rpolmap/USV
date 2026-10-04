@@ -401,9 +401,6 @@
                 <div className="flex flex-col min-h-screen">
                     <header className="border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <a href="index.html" className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-                                ⬅
-                            </a>
                             <h1 className="text-xl font-bold tracking-tight">Parliament Customizer & Visualizer</h1>
                         </div>
                         <div className="flex items-center gap-4">
@@ -416,6 +413,7 @@
                     </header>
 
                     <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+                        {/* Control Panel */}
                         <div className="lg:col-span-4 flex flex-col gap-6 bg-white dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 block">
@@ -423,4 +421,265 @@
                                 </label>
                                 <select 
                                     onChange={(e) => loadPreset(e.target.value)}
-                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    {Object.entries(PRESETS).map(([key, p]) => (
+                                        <option key={key} value={key}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                                <button 
+                                    onClick={() => setActiveTab('parties')}
+                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'parties' ? 'bg-white dark:bg-slate-800 shadow' : 'text-slate-500'}`}>
+                                    Parties ({parties.length})
+                                </button>
+                                <button 
+                                    onClick={() => setActiveTab('layout')}
+                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'layout' ? 'bg-white dark:bg-slate-800 shadow' : 'text-slate-500'}`}>
+                                    Layout Controls
+                                </button>
+                            </div>
+
+                            {activeTab === 'parties' && (
+                                <div className="flex flex-col gap-4 flex-1 overflow-y-auto max-h-[500px] pr-1">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-semibold">Total Seats: {totalSeats}</span>
+                                        <button 
+                                            onClick={addParty}
+                                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition">
+                                            + Add Party
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                                        <span className="text-xs font-medium text-slate-500">Scale to:</span>
+                                        <input 
+                                            type="number"
+                                            value={targetSeatsInput}
+                                            onChange={(e) => setTargetSeatsInput(e.target.value)}
+                                            className="w-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-center"
+                                        />
+                                        <button 
+                                            onClick={() => handleScaleTotalSeats(targetSeatsInput)}
+                                            className="px-2.5 py-1 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg">
+                                            Apply
+                                        </button>
+                                    </div>
+
+                                    {parties.map((party) => (
+                                        <div 
+                                            key={party.id}
+                                            onMouseEnter={() => setHoveredParty(party.id)}
+                                            onMouseLeave={() => setHoveredParty(null)}
+                                            className={`p-3 rounded-xl border transition flex flex-col gap-2 ${selectedParties.has(party.id) ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40'}`}>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <input 
+                                                    type="color"
+                                                    value={party.color}
+                                                    onChange={(e) => updateParty(party.id, 'color', e.target.value)}
+                                                    className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent"
+                                                />
+                                                <input 
+                                                    type="text"
+                                                    value={party.name}
+                                                    onChange={(e) => updateParty(party.id, 'name', e.target.value)}
+                                                    className="flex-1 bg-transparent font-medium text-sm focus:outline-none border-b border-transparent focus:border-indigo-500"
+                                                />
+                                                <button 
+                                                    onClick={() => togglePartySelection(party.id)}
+                                                    className={`px-2 py-0.5 text-xs rounded border ${selectedParties.has(party.id) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                    Coalition
+                                                </button>
+                                                <button 
+                                                    onClick={() => deleteParty(party.id)}
+                                                    className="text-slate-400 hover:text-red-500 text-xs px-1">
+                                                    ✕
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-xs text-slate-500">
+                                                <span>Seats:</span>
+                                                <input 
+                                                    type="number"
+                                                    value={party.seats}
+                                                    onChange={(e) => updateParty(party.id, 'seats', e.target.value)}
+                                                    className="w-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-right font-medium text-slate-900 dark:text-slate-100"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {activeTab === 'layout' && (
+                                <div className="flex flex-col gap-4 flex-1">
+                                    <div>
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 block">
+                                            Seating Layout Style
+                                        </label>
+                                        <select 
+                                            value={layoutStyle}
+                                            onChange={(e) => setLayoutStyle(e.target.value)}
+                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            <option value="semicircle">Hemicycle / Semicircle</option>
+                                            <option value="fullcircle">Full Circle / Horsehoe</option>
+                                            <option value="classroom">Classroom / Grid</option>
+                                            <option value="westminster">Westminster / Benches</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between text-xs font-medium mb-1">
+                                            <span>Number of Rows</span>
+                                            <span>{numRows}</span>
+                                        </div>
+                                        <input 
+                                            type="range" min="1" max="25" value={numRows}
+                                            onChange={(e) => setNumRows(parseInt(e.target.value))}
+                                            className="w-full accent-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between text-xs font-medium mb-1">
+                                            <span>Seat Size</span>
+                                            <span>{seatRadius}px</span>
+                                        </div>
+                                        <input 
+                                            type="range" min="2" max="15" step="0.5" value={seatRadius}
+                                            onChange={(e) => setSeatRadius(parseFloat(e.target.value))}
+                                            className="w-full accent-indigo-600"
+                                        />
+                                    </div>
+
+                                    {layoutStyle === 'semicircle' && (
+                                        <div>
+                                            <div className="flex justify-between text-xs font-medium mb-1">
+                                                <span>Side Margin Angle</span>
+                                                <span>{paddingAngle}°</span>
+                                            </div>
+                                            <input 
+                                                type="range" min="0" max="30" value={paddingAngle}
+                                                onChange={(e) => setPaddingAngle(parseInt(e.target.value))}
+                                                className="w-full accent-indigo-600"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <div className="flex justify-between text-xs font-medium mb-1">
+                                            <span>Inner Radius</span>
+                                            <span>{innerRadius}px</span>
+                                        </div>
+                                        <input 
+                                            type="range" min="50" max="250" value={innerRadius}
+                                            onChange={(e) => setInnerRadius(parseInt(e.target.value))}
+                                            className="w-full accent-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between text-xs font-medium mb-1">
+                                            <span>Outer Radius</span>
+                                            <span>{outerRadius}px</span>
+                                        </div>
+                                        <input 
+                                            type="range" min="200" max="450" value={outerRadius}
+                                            onChange={(e) => setOuterRadius(parseInt(e.target.value))}
+                                            className="w-full accent-indigo-600"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Visualization Area */}
+                        <div className="lg:col-span-8 bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between items-center relative overflow-hidden min-h-[500px]">
+                            {/* Coalition Counter Banner */}
+                            {selectedParties.size > 0 && (
+                                <div className="absolute top-4 left-4 right-4 bg-indigo-600 text-white p-3 rounded-xl shadow-lg flex items-center justify-between z-10 transition">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-sm">Selected Coalition:</span>
+                                        <span className="text-xs opacity-90">({selectedParties.size} Parties)</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm font-semibold">
+                                        <span>Seats: {coalitionSeatsTotal} / {totalSeats}</span>
+                                        <span className={`px-2 py-0.5 rounded text-xs ${coalitionSeatsTotal >= majorityThreshold ? 'bg-emerald-500 text-white' : 'bg-indigo-800 text-indigo-200'}`}>
+                                            {coalitionSeatsTotal >= majorityThreshold ? 'Majority Secured' : `Needs ${majorityThreshold - coalitionSeatsTotal} more`}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Main SVG Render */}
+                            <div className="w-full flex-1 flex items-center justify-center relative">
+                                <svg 
+                                    viewBox="-350 -350 700 400" 
+                                    className="w-full h-full max-h-[500px] overflow-visible">
+                                    {/* Majority Threshold Marker (Semicircle mode only) */}
+                                    {layoutStyle === 'semicircle' && totalSeats > 0 && (
+                                        <line 
+                                            x1="0" y1="-100" 
+                                            x2="0" y2="-320" 
+                                            stroke={darkMode ? "#475569" : "#cbd5e1"} 
+                                            strokeDasharray="4 4" 
+                                            strokeWidth="2" 
+                                        />
+                                    )}
+
+                                    {/* Seat Circles */}
+                                    {seats.map((seat, idx) => {
+                                        const isHovered = hoveredSeat === seat.id || (hoveredParty && seat.party?.id === hoveredParty);
+                                        const isCoalitionSelected = seat.party && selectedParties.has(seat.party.id);
+                                        const isAnyCoalitionActive = selectedParties.size > 0;
+
+                                        let opacity = 1;
+                                        if (isAnyCoalitionActive && !isCoalitionSelected) opacity = 0.25;
+                                        if (hoveredParty && seat.party?.id !== hoveredParty) opacity = 0.2;
+
+                                        return (
+                                            <circle
+                                                key={seat.id || idx}
+                                                cx={seat.x}
+                                                cy={seat.y}
+                                                r={isHovered ? seatRadius * 1.3 : seatRadius}
+                                                fill={seat.party ? seat.party.color : '#94a3b8'}
+                                                opacity={opacity}
+                                                stroke={isHovered ? '#ffffff' : 'none'}
+                                                strokeWidth="2"
+                                                className="transition-all duration-150 cursor-pointer"
+                                                onMouseEnter={() => setHoveredSeat(seat.id)}
+                                                onMouseLeave={() => setHoveredSeat(null)}
+                                            />
+                                        );
+                                    })}
+                                </svg>
+                            </div>
+
+                            {/* Information Summary */}
+                            <div className="w-full pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
+                                <div>
+                                    <span>Majority Threshold: </span>
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{majorityThreshold} Seats</span>
+                                </div>
+                                <div className="flex gap-4">
+                                    {parties.map(p => (
+                                        <div key={p.id} className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }}></span>
+                                            <span>{p.name}: {p.seats}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
