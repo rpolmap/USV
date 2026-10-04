@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parliament Customizer & Visualizer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 transition-colors duration-200 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // Custom Initial Presets
+        const PRESETS = {
+            empty: {
+                name: "Empty / Start from Scratch",
+                numRows: 5,
+                seatRadius: 9.0,
+                parties: []
+            },
+            germanBundestag: {
+                name: "German Bundestag (733 Seats)",
+                numRows: 15,
+                seatRadius: 4.5,
+                parties: [
+                    { id: '1', name: 'The Left', seats: 28, color: '#EF4444', description: 'Democratic Socialist' },
+                    { id: '2', name: 'SPD', seats: 207, color: '#DC2626', description: 'Social Democratic Party' },
+                    { id: '3', name: 'Alliance 90/Greens', seats: 117, color: '#16A34A', description: 'Green/Ecologist' },
+                    { id: '4', name: 'FDP', seats: 91, color: '#FACC15', description: 'Free Democratic Party (Liberal)' },
+                    { id: '5', name: 'CDU/CSU', seats: 196, color: '#18181B', description: 'Christian Democrats (Conservative)' },
+                    { id: '6', name: 'AfD', seats: 77, color: '#2563EB', description: 'Alternative for Germany (Far-Right)' },
+                    { id: '7', name: 'Independents/Others', seats: 27, color: '#78716C', description: 'Non-aligned representatives' }
+                ]
+            },
+            usSenate: {
+                name: "US Senate (100 Seats)",
+                numRows: 5,
+                seatRadius: 9.5,
+                parties: [
+                    { id: '1', name: 'Democrats', seats: 48, color: '#2563EB', description: 'Democratic Party Caucus' },
+                    { id: '2', name: 'Independents', seats: 3, color: '#10B981', description: 'Independent Senators caucusing Left' },
+                    { id: '3', name: 'Republicans', seats: 49, color: '#EF4444', description: 'Republican Party Caucus' }
+                ]
+            },
+            demo100: {
+                name: "Classic Three-Party (100 Seats)",
+                numRows: 5,
+                seatRadius: 9.0,
+                parties: [
+                    { id: '1', name: 'Socialists', seats: 37, color: '#EF4444', description: 'Centre-Left' },
+                    { id: '2', name: 'Conservatives', seats: 24, color: '#06B6D4', description: 'Centre-Right' },
+                    { id: '3', name: 'Republicans', seats: 39, color: '#3B82F6', description: 'Right-Wing' }
+                ]
+            }
+        };
+
+        function App() {
+            // App Settings
+            const [darkMode, setDarkMode] = useState(true);
+            const [activeTab, setActiveTab] = useState('parties');
+            const [layoutStyle, setLayoutStyle] = useState('semicircle'); // semicircle, westminster, classroom, fullcircle
+
+            // Parties State
+            const [parties, setParties] = useState(PRESETS.demo100.parties);
+
+            const totalSeats = useMemo(() => {
+                return parties.reduce((sum, p) => sum + p.seats, 0);
+            }, [parties]);
+
+            const [targetSeatsInput, setTargetSeatsInput] = useState("100");
+
+            useEffect(() => {
+                if (totalSeats > 0) {
+                    setTargetSeatsInput(totalSeats.toString());
+                }
+            }, [totalSeats]);
+
+            // Geometry Sliders
+            const [numRows, setNumRows] = useState(5);
+            const [paddingAngle, setPaddingAngle] = useState(5);
+            const [seatRadius, setSeatRadius] = useState(9);
+            const [innerRadius, setInnerRadius] = useState(150);
+            const [outerRadius, setOuterRadius] = useState(300);
+
+            // UI state
+            const [selectedParties, setSelectedParties] = useState(new Set());
+            const [hoveredParty, setHoveredParty] = useState(null);
+            const [hoveredSeat, setHoveredSeat] = useState(null);
+
+            const majorityThreshold = useMemo(() => {
+                return totalSeats > 0 ? Math.floor(totalSeats / 2) + 1 : 0;
+            }, [totalSeats]);
+
+            // Sync Dark Mode Classes
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                    document.body.className = "bg-slate-900 text-slate-100 transition-colors duration-200 min-h-screen";
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.body.className = "bg-slate-50 text-slate-900 transition-colors duration-200 min-h-screen";
+                }
+            }, [darkMode]);
+
+            // Auto Scaler (Hamilton Method)
+            const handleScaleTotalSeats = (newTarget) => {
+                const target = parseInt(newTarget);
+                if (isNaN(target) || target < 1 || parties.length === 0) return;
+
+                const currentSum = parties.reduce((sum, p) => sum + p.seats, 0);
+                if (currentSum === 0) return;
+
+                let allocated = 0;
+                const withRemainder = parties.map(p => {
+                    const exactShare = (p.seats / currentSum) * target;
+                    const floorShare = Math.floor(exactShare);
+                    const remainder = exactShare - floorShare;
+                    allocated += floorShare;
+                    return { id: p.id, floorShare, remainder, partyRef: p };
+                });
+
+                let leftover = target - allocated;
+                withRemainder.sort((a, b) => b.remainder - a.remainder);
+
+                const updatedSeatsMap = {};
+                withRemainder.forEach((item, index) => {
+                    let finalShare = item.floorShare;
+                    if (index < leftover) finalShare += 1;
+                    if (finalShare === 0 && target >= parties.length) finalShare = 1;
+                    updatedSeatsMap[item.id] = finalShare;
+                });
+
+                const updatedParties = parties.map(p => ({
+                    ...p,
+                    seats: updatedSeatsMap[p.id] !== undefined ? updatedSeatsMap[p.id] : p.seats
+                }));
+
+                setParties(updatedParties);
+                autoOptimizeLayoutForCount(target);
+            };
+
+            const autoOptimizeLayoutForCount = (seatCount) => {
+                if (seatCount <= 100) {
+                    setNumRows(5);
+                    setSeatRadius(9);
+                } else if (seatCount <= 250) {
+                    setNumRows(8);
+                    setSeatRadius(7.5);
+                } else if (seatCount <= 450) {
+                    setNumRows(11);
+                    setSeatRadius(6.0);
+                } else if (seatCount <= 800) {
+                    setNumRows(14);
+                    setSeatRadius(4.5);
+                } else {
+                    setNumRows(18);
+                    setSeatRadius(3.5);
+                }
+            };
+
+            // Preset loader
+            const loadPreset = (presetKey) => {
+                const target = PRESETS[presetKey];
+                if (target) {
+                    setParties(target.parties);
+                    setNumRows(target.numRows);
+                    setSeatRadius(target.seatRadius);
+                    setSelectedParties(new Set());
+                }
+            };
+
+            // Party handlers
+            const addParty = () => {
+                const newId = Date.now().toString();
+                const colors = ['#EF4444', '#3B82F6', '#10B981', '#FACC15', '#EC4899', '#8B5CF6', '#F97316', '#06B6D4'];
+                const randomColor = colors[parties.length % colors.length];
+                const newParties = [...parties, {
+                    id: newId,
+                    name: `Party ${parties.length + 1}`,
+                    seats: 15,
+                    color: randomColor,
+                    description: 'Faction / Spectrum Member'
+                }];
+                setParties(newParties);
+            };
+
+            const deleteParty = (id) => {
+                setParties(parties.filter(p => p.id !== id));
+                const newSelection = new Set(selectedParties);
+                newSelection.delete(id);
+                setSelectedParties(newSelection);
+            };
+
+            const updateParty = (id, field, value) => {
+                setParties(parties.map(p => {
+                    if (p.id === id) {
+                        let parsedValue = value;
+                        if (field === 'seats') {
+                            parsedValue = Math.max(1, parseInt(value) || 1);
+                        }
+                        return { ...p, [field]: parsedValue };
+                    }
+                    return p;
+                }));
+            };
+
+            const togglePartySelection = (id) => {
+                const next = new Set(selectedParties);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                setSelectedParties(next);
+            };
+
+            // COORDINATE MATH ENGINE FOR DIFFERENT LAYOUTS
+            const seats = useMemo(() => {
+                if (totalSeats === 0) return [];
+                const generatedSeats = [];
+
+                if (layoutStyle === 'semicircle') {
+                    const paddingRad = (paddingAngle * Math.PI) / 180;
+                    const minAngle = Math.PI - paddingRad;
+                    const maxAngle = paddingRad;
+                    const angleRange = minAngle - maxAngle;
+
+                    const rows = [];
+                    let totalRadiusSum = 0;
+                    for (let r = 0; r < numRows; r++) {
+                        const radius = innerRadius + (r * (outerRadius - innerRadius)) / (numRows - 1 || 1);
+                        rows.push({ radius, seats: 0 });
+                        totalRadiusSum += radius;
+                    }
+
+                    let distributedCount = 0;
+                    rows.forEach(row => {
+                        const share = row.radius / totalRadiusSum;
+                        let allocated = Math.floor(totalSeats * share);
+                        row.seats = allocated;
+                        distributedCount += allocated;
+                    });
+
+                    let remainder = totalSeats - distributedCount;
+                    let rowIdx = numRows - 1;
+                    while (remainder > 0) {
+                        rows[rowIdx % numRows].seats += 1;
+                        remainder--;
+                        rowIdx--;
+                    }
+
+                    rows.forEach((row, rIdx) => {
+                        const count = row.seats;
+                        for (let sIdx = 0; sIdx < count; sIdx++) {
+                            const angle = minAngle - (sIdx * angleRange) / (count - 1 || 1);
+                            const x = row.radius * Math.cos(angle);
+                            const y = -row.radius * Math.sin(angle);
+                            generatedSeats.push({ x, y, angle, row: rIdx + 1, col: sIdx + 1 });
+                        }
+                    });
+
+                    generatedSeats.sort((a, b) => b.angle - a.angle);
+
+                } else if (layoutStyle === 'fullcircle') {
+                    const angleRange = 2 * Math.PI;
+                    const rows = [];
+                    let totalRadiusSum = 0;
+                    for (let r = 0; r < numRows; r++) {
+                        const radius = innerRadius + (r * (outerRadius - innerRadius)) / (numRows - 1 || 1);
+                        rows.push({ radius, seats: 0 });
+                        totalRadiusSum += radius;
+                    }
+
+                    let distributedCount = 0;
+                    rows.forEach(row => {
+                        const share = row.radius / totalRadiusSum;
+                        let allocated = Math.floor(totalSeats * share);
+                        row.seats = allocated;
+                        distributedCount += allocated;
+                    });
+
+                    let remainder = totalSeats - distributedCount;
+                    let rowIdx = numRows - 1;
+                    while (remainder > 0) {
+                        rows[rowIdx % numRows].seats += 1;
+                        remainder--;
+                        rowIdx--;
+                    }
+
+                    rows.forEach((row, rIdx) => {
+                        const count = row.seats;
+                        for (let sIdx = 0; sIdx < count; sIdx++) {
+                            const angle = Math.PI + (sIdx * angleRange) / count;
+                            const x = (row.radius * 0.9) * Math.cos(angle);
+                            const y = -200 + (row.radius * 0.9) * Math.sin(angle);
+                            generatedSeats.push({ x, y, angle, row: rIdx + 1, col: sIdx + 1 });
+                        }
+                    });
+
+                    generatedSeats.sort((a, b) => {
+                        let normA = a.angle < 0 ? a.angle + 2 * Math.PI : a.angle;
+                        let normB = b.angle < 0 ? b.angle + 2 * Math.PI : b.angle;
+                        return normA - normB;
+                    });
+
+                } else if (layoutStyle === 'classroom') {
+                    const totalGridSeats = totalSeats;
+                    const seatsPerRow = Math.ceil(totalGridSeats / numRows);
+                    const rowHeight = (outerRadius - innerRadius) / (numRows - 1 || 1);
+                    
+                    for (let r = 0; r < numRows; r++) {
+                        const y = - (innerRadius + r * rowHeight);
+                        const width = 240 + r * 30;
+                        const seatsInThisRow = r === numRows - 1 
+                            ? (totalGridSeats - (seatsPerRow * (numRows - 1))) 
+                            : seatsPerRow;
+
+                        for (let s = 0; s < seatsInThisRow; s++) {
+                            const x = seatsInThisRow > 1 
+                                ? - (width / 2) + (s * width) / (seatsInThisRow - 1)
+                                : 0;
+                            generatedSeats.push({ x, y, row: r + 1, col: s + 1, angle: -x });
+                        }
+                    }
+                    generatedSeats.sort((a, b) => a.x - b.x);
+
+                } else if (layoutStyle === 'westminster') {
+                    const leftSeatsCount = Math.ceil(totalSeats / 2);
+                    const rightSeatsCount = totalSeats - leftSeatsCount;
+
+                    const benchCount = Math.max(2, Math.floor(numRows / 2)); 
+                    const seatsPerBenchLeft = Math.ceil(leftSeatsCount / benchCount);
+                    const seatsPerBenchRight = Math.ceil(rightSeatsCount / benchCount);
+
+                    const aisleWidth = 60;
+                    const horizontalSpacing = 28;
+                    const verticalSpacing = 20;
+
+                    for (let b = 0; b < benchCount; b++) {
+                        const x = - (aisleWidth / 2 + b * horizontalSpacing);
+                        const currentBenchSeats = b === benchCount - 1
+                            ? (leftSeatsCount - (b * seatsPerBenchLeft))
+                            : seatsPerBenchLeft;
+
+                        const height = (currentBenchSeats - 1) * verticalSpacing;
+                        const startY = -220 - height / 2;
+
+                        for (let s = 0; s < currentBenchSeats; s++) {
+                            const y = startY + s * verticalSpacing;
+                            generatedSeats.push({ x, y, row: b + 1, col: s + 1, side: 'left' });
+                        }
+                    }
+
+                    for (let b = 0; b < benchCount; b++) {
+                        const x = (aisleWidth / 2 + b * horizontalSpacing);
+                        const currentBenchSeats = b === benchCount - 1
+                            ? (rightSeatsCount - (b * seatsPerBenchRight))
+                            : seatsPerBenchRight;
+
+                        const height = (currentBenchSeats - 1) * verticalSpacing;
+                        const startY = -220 - height / 2;
+
+                        for (let s = 0; s < currentBenchSeats; s++) {
+                            const y = startY + s * verticalSpacing;
+                            generatedSeats.push({ x, y, row: b + 1, col: s + 1, side: 'right' });
+                        }
+                    }
+
+                    generatedSeats.sort((a, b) => a.x - b.x);
+                }
+
+                // Assign ordered seats to customized parties sequentially
+                let seatCounter = 0;
+                parties.forEach(party => {
+                    for (let i = 0; i < party.seats; i++) {
+                        if (seatCounter < generatedSeats.length) {
+                            generatedSeats[seatCounter].party = party;
+                            generatedSeats[seatCounter].id = `seat-${seatCounter + 1}`;
+                            seatCounter++;
+                        }
+                    }
+                });
+
+                return generatedSeats;
+            }, [parties, totalSeats, numRows, paddingAngle, innerRadius, outerRadius, layoutStyle]);
+
+            // Selected coalition total
+            const coalitionSeatsTotal = useMemo(() => {
+                return parties
+                    .filter(p => selectedParties.has(p.id))
+                    .reduce((sum, p) => sum + p.seats, 0);
+            }, [parties, selectedParties]);
+
+            return (
+                <div className="flex flex-col min-h-screen">
+                    {/* Top Navbar */}
+                    <header className="border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <a href="index.html" className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                                ⬅
+                            </a>
+                            <h1 className="text-xl font-bold tracking-tight">Parliament Customizer & Visualizer</h1>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setDarkMode(!darkMode)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                                {darkMode ? '☀️ Light' : '🌙 Dark'}
+                            </button>
+                      
