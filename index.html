@@ -1,11 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Mobile Site</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Providence Materials</title>
+    <!-- Tailwind CSS for clean modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
-<body>
-  <h1>Hello World!</h1>
-  <p>My site is live from my phone.</p>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-center items-center px-4">
+
+    <!-- Header Section -->
+    <header class="text-center mb-12">
+        <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight text-white mb-2">
+            Providence
+        </h1>
+        <p class="text-xl sm:text-2xl font-light text-slate-400 tracking-wide">
+            Materials
+        </p>
+    </header>
+
+    <!-- Navigation / Buttons Section -->
+    <main class="w-full max-w-md flex flex-col gap-4">
+        
+        <!-- Parliament Visualization Link Button -->
+        <a href="parliament.html" 
+           class="w-full text-center py-4 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
+            Parliament Visualization
+        </a>
+
+        <!-- Space for future buttons -->
+        <!-- 
+        <a href="subpage2.html" class="w-full text-center py-4 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-all">
+            New Subpage
+        </a> 
+        -->
+
+    </main>
+
 </body>
 </html>
+
