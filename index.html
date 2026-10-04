@@ -13,19 +13,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-center items-center px-4 relative">
-
-    <!-- ADDED: Subtle Top-Left Login Link -->
-    <a href="login.html" 
-       title="Login"
-       class="absolute top-4 left-4 p-2 text-slate-500 hover:text-slate-300 transition-colors duration-200 text-xs flex items-center gap-1.5 rounded-md hover:bg-slate-800/50">
-        <!-- Minimal Lock Icon -->
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-        <span class="font-medium">Login</span>
-    </a>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-center items-center px-4">
 
     <!-- Header Section -->
     <header class="text-center mb-12">
@@ -54,7 +42,7 @@
 
     </main>
 
-    <!-- Search Modal Popup -->
+    <!-- ADDED: Search Modal Popup -->
     <div id="searchModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden justify-center items-center p-4 z-50">
         <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative">
             
@@ -74,10 +62,10 @@
         </div>
     </div>
 
-    <!-- Link your existing fandom.js file -->
+    <!-- ADDED: Link your existing fandom.js file -->
     <script src="fandom.js"></script>
 
-    <!-- Small helper script to toggle the popup open/closed -->
+    <!-- ADDED: Small helper script to toggle the popup open/closed -->
     <script>
         function toggleSearchModal() {
             const modal = document.getElementById('searchModal');
