@@ -1,685 +1,354 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parliament Customizer & Visualizer</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Babel for JSX compilation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-        .dark ::-webkit-scrollbar-thumb {
-            background: #475569;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parliament Customizer & Visualizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- FIX: Tailwind CDN defaults to OS-based dark mode; the toggle needs class mode -->
+<script>tailwind.config = { darkMode: 'class' };</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  body { font-family: 'Inter', sans-serif; }
+</style>
 </head>
-<body class="bg-slate-50 text-slate-900 transition-colors duration-200 min-h-screen">
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
-
-        const PRESETS = {
-            empty: {
-                name: "Empty / Start from Scratch",
-                numRows: 5,
-                seatRadius: 9.0,
-                parties: []
-            },
-            germanBundestag: {
-                name: "German Bundestag (733 Seats)",
-                numRows: 15,
-                seatRadius: 4.5,
-                parties: [
-                    { id: '1', name: 'The Left', seats: 28, color: '#EF4444', description: 'Democratic Socialist' },
-                    { id: '2', name: 'SPD', seats: 207, color: '#DC2626', description: 'Social Democratic Party' },
-                    { id: '3', name: 'Alliance 90/Greens', seats: 117, color: '#16A34A', description: 'Green/Ecologist' },
-                    { id: '4', name: 'FDP', seats: 91, color: '#FACC15', description: 'Free Democratic Party (Liberal)' },
-                    { id: '5', name: 'CDU/CSU', seats: 196, color: '#18181B', description: 'Christian Democrats (Conservative)' },
-                    { id: '6', name: 'AfD', seats: 77, color: '#2563EB', description: 'Alternative for Germany (Far-Right)' },
-                    { id: '7', name: 'Independents/Others', seats: 27, color: '#78716C', description: 'Non-aligned representatives' }
-                ]
-            },
-            usSenate: {
-                name: "US Senate (100 Seats)",
-                numRows: 5,
-                seatRadius: 9.5,
-                parties: [
-                    { id: '1', name: 'Democrats', seats: 48, color: '#2563EB', description: 'Democratic Party Caucus' },
-                    { id: '2', name: 'Independents', seats: 3, color: '#10B981', description: 'Independent Senators caucusing Left' },
-                    { id: '3', name: 'Republicans', seats: 49, color: '#EF4444', description: 'Republican Party Caucus' }
-                ]
-            },
-            demo100: {
-                name: "Classic Three-Party (100 Seats)",
-                numRows: 5,
-                seatRadius: 9.0,
-                parties: [
-                    { id: '1', name: 'Socialists', seats: 37, color: '#EF4444', description: 'Centre-Left' },
-                    { id: '2', name: 'Conservatives', seats: 24, color: '#06B6D4', description: 'Centre-Right' },
-                    { id: '3', name: 'Republicans', seats: 39, color: '#3B82F6', description: 'Right-Wing' }
-                ]
-            }
-        };
-
-        function App() {
-            const [darkMode, setDarkMode] = useState(true);
-            const [activeTab, setActiveTab] = useState('parties');
-            const [layoutStyle, setLayoutStyle] = useState('semicircle');
-            const [parties, setParties] = useState(PRESETS.demo100.parties);
-            const [targetSeatsInput, setTargetSeatsInput] = useState("100");
-
-            const totalSeats = useMemo(() => {
-                return parties.reduce((sum, p) => sum + p.seats, 0);
-            }, [parties]);
-
-            useEffect(() => {
-                if (totalSeats > 0) {
-                    setTargetSeatsInput(totalSeats.toString());
-                }
-            }, [totalSeats]);
-
-            const [numRows, setNumRows] = useState(5);
-            const [paddingAngle, setPaddingAngle] = useState(5);
-            const [seatRadius, setSeatRadius] = useState(9);
-            const [innerRadius, setInnerRadius] = useState(150);
-            const [outerRadius, setOuterRadius] = useState(300);
-
-            const [selectedParties, setSelectedParties] = useState(new Set());
-            const [hoveredParty, setHoveredParty] = useState(null);
-            const [hoveredSeat, setHoveredSeat] = useState(null);
-
-            const majorityThreshold = useMemo(() => {
-                return totalSeats > 0 ? Math.floor(totalSeats / 2) + 1 : 0;
-            }, [totalSeats]);
-
-            useEffect(() => {
-                if (darkMode) {
-                    document.documentElement.classList.add('dark');
-                    document.body.className = "bg-slate-900 text-slate-100 transition-colors duration-200 min-h-screen";
-                } else {
-                    document.documentElement.classList.remove('dark');
-                    document.body.className = "bg-slate-50 text-slate-900 transition-colors duration-200 min-h-screen";
-                }
-            }, [darkMode]);
-
-            const handleScaleTotalSeats = (newTarget) => {
-                const target = parseInt(newTarget);
-                if (isNaN(target) || target < 1 || parties.length === 0) return;
-
-                const currentSum = parties.reduce((sum, p) => sum + p.seats, 0);
-                if (currentSum === 0) return;
-
-                let allocated = 0;
-                const withRemainder = parties.map(p => {
-                    const exactShare = (p.seats / currentSum) * target;
-                    const floorShare = Math.floor(exactShare);
-                    const remainder = exactShare - floorShare;
-                    allocated += floorShare;
-                    return { id: p.id, floorShare, remainder, partyRef: p };
-                });
-
-                let leftover = target - allocated;
-                withRemainder.sort((a, b) => b.remainder - a.remainder);
-
-                const updatedSeatsMap = {};
-                withRemainder.forEach((item, index) => {
-                    let finalShare = item.floorShare;
-                    if (index < leftover) finalShare += 1;
-                    if (finalShare === 0 && target >= parties.length) finalShare = 1;
-                    updatedSeatsMap[item.id] = finalShare;
-                });
-
-                const updatedParties = parties.map(p => ({
-                    ...p,
-                    seats: updatedSeatsMap[p.id] !== undefined ? updatedSeatsMap[p.id] : p.seats
-                }));
-
-                setParties(updatedParties);
-                autoOptimizeLayoutForCount(target);
-            };
-
-            const autoOptimizeLayoutForCount = (seatCount) => {
-                if (seatCount <= 100) {
-                    setNumRows(5);
-                    setSeatRadius(9);
-                } else if (seatCount <= 250) {
-                    setNumRows(8);
-                    setSeatRadius(7.5);
-                } else if (seatCount <= 450) {
-                    setNumRows(11);
-                    setSeatRadius(6.0);
-                } else if (seatCount <= 800) {
-                    setNumRows(14);
-                    setSeatRadius(4.5);
-                } else {
-                    setNumRows(18);
-                    setSeatRadius(3.5);
-                }
-            };
-
-            const loadPreset = (presetKey) => {
-                const target = PRESETS[presetKey];
-                if (target) {
-                    setParties(target.parties);
-                    setNumRows(target.numRows);
-                    setSeatRadius(target.seatRadius);
-                    setSelectedParties(new Set());
-                }
-            };
-
-            const addParty = () => {
-                const newId = Date.now().toString();
-                const colors = ['#EF4444', '#3B82F6', '#10B981', '#FACC15', '#EC4899', '#8B5CF6', '#F97316', '#06B6D4'];
-                const randomColor = colors[parties.length % colors.length];
-                setParties([...parties, {
-                    id: newId,
-                    name: `Party ${parties.length + 1}`,
-                    seats: 15,
-                    color: randomColor,
-                    description: 'Faction Member'
-                }]);
-            };
-
-            const deleteParty = (id) => {
-                setParties(parties.filter(p => p.id !== id));
-                const nextSelection = new Set(selectedParties);
-                nextSelection.delete(id);
-                setSelectedParties(nextSelection);
-            };
-
-            const updateParty = (id, field, value) => {
-                setParties(parties.map(p => {
-                    if (p.id === id) {
-                        let parsedValue = value;
-                        if (field === 'seats') {
-                            parsedValue = Math.max(1, parseInt(value) || 1);
-                        }
-                        return { ...p, [field]: parsedValue };
-                    }
-                    return p;
-                }));
-            };
-
-            const togglePartySelection = (id) => {
-                const next = new Set(selectedParties);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                setSelectedParties(next);
-            };
-
-            const seats = useMemo(() => {
-                if (totalSeats === 0) return [];
-                const generatedSeats = [];
-
-                if (layoutStyle === 'semicircle') {
-                    const paddingRad = (paddingAngle * Math.PI) / 180;
-                    const minAngle = Math.PI - paddingRad;
-                    const maxAngle = paddingRad;
-                    const angleRange = minAngle - maxAngle;
-
-                    const rows = [];
-                    let totalRadiusSum = 0;
-                    for (let r = 0; r < numRows; r++) {
-                        const radius = innerRadius + (r * (outerRadius - innerRadius)) / (numRows - 1 || 1);
-                        rows.push({ radius, seats: 0 });
-                        totalRadiusSum += radius;
-                    }
-
-                    let distributedCount = 0;
-                    rows.forEach(row => {
-                        const share = row.radius / totalRadiusSum;
-                        let allocated = Math.floor(totalSeats * share);
-                        row.seats = allocated;
-                        distributedCount += allocated;
-                    });
-
-                    let remainder = totalSeats - distributedCount;
-                    let rowIdx = numRows - 1;
-                    while (remainder > 0) {
-                        rows[rowIdx % numRows].seats += 1;
-                        remainder--;
-                        rowIdx--;
-                    }
-
-                    rows.forEach((row, rIdx) => {
-                        const count = row.seats;
-                        for (let sIdx = 0; sIdx < count; sIdx++) {
-                            const angle = minAngle - (sIdx * angleRange) / (count - 1 || 1);
-                            const x = row.radius * Math.cos(angle);
-                            const y = -row.radius * Math.sin(angle);
-                            generatedSeats.push({ x, y, angle, row: rIdx + 1, col: sIdx + 1 });
-                        }
-                    });
-
-                    generatedSeats.sort((a, b) => b.angle - a.angle);
-
-                } else if (layoutStyle === 'fullcircle') {
-                    const angleRange = 2 * Math.PI;
-                    const rows = [];
-                    let totalRadiusSum = 0;
-                    for (let r = 0; r < numRows; r++) {
-                        const radius = innerRadius + (r * (outerRadius - innerRadius)) / (numRows - 1 || 1);
-                        rows.push({ radius, seats: 0 });
-                        totalRadiusSum += radius;
-                    }
-
-                    let distributedCount = 0;
-                    rows.forEach(row => {
-                        const share = row.radius / totalRadiusSum;
-                        let allocated = Math.floor(totalSeats * share);
-                        row.seats = allocated;
-                        distributedCount += allocated;
-                    });
-
-                    let remainder = totalSeats - distributedCount;
-                    let rowIdx = numRows - 1;
-                    while (remainder > 0) {
-                        rows[rowIdx % numRows].seats += 1;
-                        remainder--;
-                        rowIdx--;
-                    }
-
-                    rows.forEach((row, rIdx) => {
-                        const count = row.seats;
-                        for (let sIdx = 0; sIdx < count; sIdx++) {
-                            const angle = Math.PI + (sIdx * angleRange) / count;
-                            const x = (row.radius * 0.9) * Math.cos(angle);
-                            const y = -200 + (row.radius * 0.9) * Math.sin(angle);
-                            generatedSeats.push({ x, y, angle, row: rIdx + 1, col: sIdx + 1 });
-                        }
-                    });
-
-                    generatedSeats.sort((a, b) => a.angle - b.angle);
-
-                } else if (layoutStyle === 'classroom') {
-                    const totalGridSeats = totalSeats;
-                    const seatsPerRow = Math.ceil(totalGridSeats / numRows);
-                    const rowHeight = (outerRadius - innerRadius) / (numRows - 1 || 1);
-                    
-                    for (let r = 0; r < numRows; r++) {
-                        const y = - (innerRadius + r * rowHeight);
-                        const width = 240 + r * 30;
-                        const seatsInThisRow = r === numRows - 1 
-                            ? (totalGridSeats - (seatsPerRow * (numRows - 1))) 
-                            : seatsPerRow;
-
-                        for (let s = 0; s < seatsInThisRow; s++) {
-                            const x = seatsInThisRow > 1 
-                                ? - (width / 2) + (s * width) / (seatsInThisRow - 1)
-                                : 0;
-                            generatedSeats.push({ x, y, row: r + 1, col: s + 1, angle: -x });
-                        }
-                    }
-                    generatedSeats.sort((a, b) => a.x - b.x);
-
-                } else if (layoutStyle === 'westminster') {
-                    const leftSeatsCount = Math.ceil(totalSeats / 2);
-                    const rightSeatsCount = totalSeats - leftSeatsCount;
-
-                    const benchCount = Math.max(2, Math.floor(numRows / 2)); 
-                    const seatsPerBenchLeft = Math.ceil(leftSeatsCount / benchCount);
-                    const seatsPerBenchRight = Math.ceil(rightSeatsCount / benchCount);
-
-                    const aisleWidth = 60;
-                    const horizontalSpacing = 28;
-                    const verticalSpacing = 20;
-
-                    for (let b = 0; b < benchCount; b++) {
-                        const x = - (aisleWidth / 2 + b * horizontalSpacing);
-                        const currentBenchSeats = b === benchCount - 1
-                            ? (leftSeatsCount - (b * seatsPerBenchLeft))
-                            : seatsPerBenchLeft;
-
-                        const height = (currentBenchSeats - 1) * verticalSpacing;
-                        const startY = -220 - height / 2;
-
-                        for (let s = 0; s < currentBenchSeats; s++) {
-                            const y = startY + s * verticalSpacing;
-                            generatedSeats.push({ x, y, row: b + 1, col: s + 1, side: 'left' });
-                        }
-                    }
-
-                    for (let b = 0; b < benchCount; b++) {
-                        const x = (aisleWidth / 2 + b * horizontalSpacing);
-                        const currentBenchSeats = b === benchCount - 1
-                            ? (rightSeatsCount - (b * seatsPerBenchRight))
-                            : seatsPerBenchRight;
-
-                        const height = (currentBenchSeats - 1) * verticalSpacing;
-                        const startY = -220 - height / 2;
-
-                        for (let s = 0; s < currentBenchSeats; s++) {
-                            const y = startY + s * verticalSpacing;
-                            generatedSeats.push({ x, y, row: b + 1, col: s + 1, side: 'right' });
-                        }
-                    }
-
-                    generatedSeats.sort((a, b) => a.x - b.x);
-                }
-
-                let seatCounter = 0;
-                parties.forEach(party => {
-                    for (let i = 0; i < party.seats; i++) {
-                        if (seatCounter < generatedSeats.length) {
-                            generatedSeats[seatCounter].party = party;
-                            generatedSeats[seatCounter].id = `seat-${seatCounter + 1}`;
-                            seatCounter++;
-                        }
-                    }
-                });
-
-                return generatedSeats;
-            }, [parties, totalSeats, numRows, paddingAngle, innerRadius, outerRadius, layoutStyle]);
-
-            const coalitionSeatsTotal = useMemo(() => {
-                return parties
-                    .filter(p => selectedParties.has(p.id))
-                    .reduce((sum, p) => sum + p.seats, 0);
-            }, [parties, selectedParties]);
-
-            return (
-                <div className="flex flex-col min-h-screen">
-                    <header className="border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur px-6 py-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-xl font-bold tracking-tight">Parliament Customizer & Visualizer</h1>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <button 
-                                onClick={() => setDarkMode(!darkMode)}
-                                className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
-                                {darkMode ? '☀️ Light' : '🌙 Dark'}
-                            </button>
-                        </div>
-                    </header>
-
-                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
-                        {/* Control Panel */}
-                        <div className="lg:col-span-4 flex flex-col gap-6 bg-white dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                            <div>
-                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 block">
-                                    Presets
-                                </label>
-                                <select 
-                                    onChange={(e) => loadPreset(e.target.value)}
-                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    {Object.entries(PRESETS).map(([key, p]) => (
-                                        <option key={key} value={key}>{p.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
-                                <button 
-                                    onClick={() => setActiveTab('parties')}
-                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'parties' ? 'bg-white dark:bg-slate-800 shadow' : 'text-slate-500'}`}>
-                                    Parties ({parties.length})
-                                </button>
-                                <button 
-                                    onClick={() => setActiveTab('layout')}
-                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'layout' ? 'bg-white dark:bg-slate-800 shadow' : 'text-slate-500'}`}>
-                                    Layout Controls
-                                </button>
-                            </div>
-
-                            {activeTab === 'parties' && (
-                                <div className="flex flex-col gap-4 flex-1 overflow-y-auto max-h-[500px] pr-1">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm font-semibold">Total Seats: {totalSeats}</span>
-                                        <button 
-                                            onClick={addParty}
-                                            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition">
-                                            + Add Party
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                                        <span className="text-xs font-medium text-slate-500">Scale to:</span>
-                                        <input 
-                                            type="number"
-                                            value={targetSeatsInput}
-                                            onChange={(e) => setTargetSeatsInput(e.target.value)}
-                                            className="w-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-center"
-                                        />
-                                        <button 
-                                            onClick={() => handleScaleTotalSeats(targetSeatsInput)}
-                                            className="px-2.5 py-1 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg">
-                                            Apply
-                                        </button>
-                                    </div>
-
-                                    {parties.map((party) => (
-                                        <div 
-                                            key={party.id}
-                                            onMouseEnter={() => setHoveredParty(party.id)}
-                                            onMouseLeave={() => setHoveredParty(null)}
-                                            className={`p-3 rounded-xl border transition flex flex-col gap-2 ${selectedParties.has(party.id) ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40'}`}>
-                                            <div className="flex items-center justify-between gap-2">
-                                                <input 
-                                                    type="color"
-                                                    value={party.color}
-                                                    onChange={(e) => updateParty(party.id, 'color', e.target.value)}
-                                                    className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent"
-                                                />
-                                                <input 
-                                                    type="text"
-                                                    value={party.name}
-                                                    onChange={(e) => updateParty(party.id, 'name', e.target.value)}
-                                                    className="flex-1 bg-transparent font-medium text-sm focus:outline-none border-b border-transparent focus:border-indigo-500"
-                                                />
-                                                <button 
-                                                    onClick={() => togglePartySelection(party.id)}
-                                                    className={`px-2 py-0.5 text-xs rounded border ${selectedParties.has(party.id) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}>
-                                                    Coalition
-                                                </button>
-                                                <button 
-                                                    onClick={() => deleteParty(party.id)}
-                                                    className="text-slate-400 hover:text-red-500 text-xs px-1">
-                                                    ✕
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center justify-between text-xs text-slate-500">
-                                                <span>Seats:</span>
-                                                <input 
-                                                    type="number"
-                                                    value={party.seats}
-                                                    onChange={(e) => updateParty(party.id, 'seats', e.target.value)}
-                                                    className="w-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-right font-medium text-slate-900 dark:text-slate-100"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {activeTab === 'layout' && (
-                                <div className="flex flex-col gap-4 flex-1">
-                                    <div>
-                                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 block">
-                                            Seating Layout Style
-                                        </label>
-                                        <select 
-                                            value={layoutStyle}
-                                            onChange={(e) => setLayoutStyle(e.target.value)}
-                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                            <option value="semicircle">Hemicycle / Semicircle</option>
-                                            <option value="fullcircle">Full Circle / Horsehoe</option>
-                                            <option value="classroom">Classroom / Grid</option>
-                                            <option value="westminster">Westminster / Benches</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <div className="flex justify-between text-xs font-medium mb-1">
-                                            <span>Number of Rows</span>
-                                            <span>{numRows}</span>
-                                        </div>
-                                        <input 
-                                            type="range" min="1" max="25" value={numRows}
-                                            onChange={(e) => setNumRows(parseInt(e.target.value))}
-                                            className="w-full accent-indigo-600"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <div className="flex justify-between text-xs font-medium mb-1">
-                                            <span>Seat Size</span>
-                                            <span>{seatRadius}px</span>
-                                        </div>
-                                        <input 
-                                            type="range" min="2" max="15" step="0.5" value={seatRadius}
-                                            onChange={(e) => setSeatRadius(parseFloat(e.target.value))}
-                                            className="w-full accent-indigo-600"
-                                        />
-                                    </div>
-
-                                    {layoutStyle === 'semicircle' && (
-                                        <div>
-                                            <div className="flex justify-between text-xs font-medium mb-1">
-                                                <span>Side Margin Angle</span>
-                                                <span>{paddingAngle}°</span>
-                                            </div>
-                                            <input 
-                                                type="range" min="0" max="30" value={paddingAngle}
-                                                onChange={(e) => setPaddingAngle(parseInt(e.target.value))}
-                                                className="w-full accent-indigo-600"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <div className="flex justify-between text-xs font-medium mb-1">
-                                            <span>Inner Radius</span>
-                                            <span>{innerRadius}px</span>
-                                        </div>
-                                        <input 
-                                            type="range" min="50" max="250" value={innerRadius}
-                                            onChange={(e) => setInnerRadius(parseInt(e.target.value))}
-                                            className="w-full accent-indigo-600"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <div className="flex justify-between text-xs font-medium mb-1">
-                                            <span>Outer Radius</span>
-                                            <span>{outerRadius}px</span>
-                                        </div>
-                                        <input 
-                                            type="range" min="200" max="450" value={outerRadius}
-                                            onChange={(e) => setOuterRadius(parseInt(e.target.value))}
-                                            className="w-full accent-indigo-600"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Visualization Area */}
-                        <div className="lg:col-span-8 bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between items-center relative overflow-hidden min-h-[500px]">
-                            {/* Coalition Counter Banner */}
-                            {selectedParties.size > 0 && (
-                                <div className="absolute top-4 left-4 right-4 bg-indigo-600 text-white p-3 rounded-xl shadow-lg flex items-center justify-between z-10 transition">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-sm">Selected Coalition:</span>
-                                        <span className="text-xs opacity-90">({selectedParties.size} Parties)</span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-sm font-semibold">
-                                        <span>Seats: {coalitionSeatsTotal} / {totalSeats}</span>
-                                        <span className={`px-2 py-0.5 rounded text-xs ${coalitionSeatsTotal >= majorityThreshold ? 'bg-emerald-500 text-white' : 'bg-indigo-800 text-indigo-200'}`}>
-                                            {coalitionSeatsTotal >= majorityThreshold ? 'Majority Secured' : `Needs ${majorityThreshold - coalitionSeatsTotal} more`}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Main SVG Render */}
-                            <div className="w-full flex-1 flex items-center justify-center relative">
-                                <svg 
-                                    viewBox="-350 -350 700 400" 
-                                    className="w-full h-full max-h-[500px] overflow-visible">
-                                    {/* Majority Threshold Marker (Semicircle mode only) */}
-                                    {layoutStyle === 'semicircle' && totalSeats > 0 && (
-                                        <line 
-                                            x1="0" y1="-100" 
-                                            x2="0" y2="-320" 
-                                            stroke={darkMode ? "#475569" : "#cbd5e1"} 
-                                            strokeDasharray="4 4" 
-                                            strokeWidth="2" 
-                                        />
-                                    )}
-
-                                    {/* Seat Circles */}
-                                    {seats.map((seat, idx) => {
-                                        const isHovered = hoveredSeat === seat.id || (hoveredParty && seat.party?.id === hoveredParty);
-                                        const isCoalitionSelected = seat.party && selectedParties.has(seat.party.id);
-                                        const isAnyCoalitionActive = selectedParties.size > 0;
-
-                                        let opacity = 1;
-                                        if (isAnyCoalitionActive && !isCoalitionSelected) opacity = 0.25;
-                                        if (hoveredParty && seat.party?.id !== hoveredParty) opacity = 0.2;
-
-                                        return (
-                                            <circle
-                                                key={seat.id || idx}
-                                                cx={seat.x}
-                                                cy={seat.y}
-                                                r={isHovered ? seatRadius * 1.3 : seatRadius}
-                                                fill={seat.party ? seat.party.color : '#94a3b8'}
-                                                opacity={opacity}
-                                                stroke={isHovered ? '#ffffff' : 'none'}
-                                                strokeWidth="2"
-                                                className="transition-all duration-150 cursor-pointer"
-                                                onMouseEnter={() => setHoveredSeat(seat.id)}
-                                                onMouseLeave={() => setHoveredSeat(null)}
-                                            />
-                                        );
-                                    })}
-                                </svg>
-                            </div>
-
-                            {/* Information Summary */}
-                            <div className="w-full pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-                                <div>
-                                    <span>Majority Threshold: </span>
-                                    <span className="font-semibold text-slate-700 dark:text-slate-300">{majorityThreshold} Seats</span>
-                                </div>
-                                <div className="flex gap-4">
-                                    {parties.map(p => (
-                                        <div key={p.id} className="flex items-center gap-1.5">
-                                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }}></span>
-                                            <span>{p.name}: {p.seats}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+<div id="root"></div>
+ 
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
+ 
+const PRESETS = {
+  demo100: { name: "Classic Three-Party (100 Seats)", numRows: 5, seatRadius: 9, parties: [
+    { id: '1', name: 'Socialists', seats: 37, color: '#EF4444' },
+    { id: '2', name: 'Conservatives', seats: 24, color: '#06B6D4' },
+    { id: '3', name: 'Republicans', seats: 39, color: '#3B82F6' } ] },
+  germanBundestag: { name: "German Bundestag 2021 (736 Seats)", numRows: 14, seatRadius: 4.5, parties: [
+    { id: '1', name: 'The Left', seats: 39, color: '#BE3075' },
+    { id: '2', name: 'SPD', seats: 206, color: '#DC2626' },
+    { id: '3', name: 'Greens', seats: 118, color: '#16A34A' },
+    { id: '4', name: 'SSW', seats: 1, color: '#2563EB' },
+    { id: '5', name: 'FDP', seats: 92, color: '#FACC15' },
+    { id: '6', name: 'CDU/CSU', seats: 197, color: '#374151' },
+    { id: '7', name: 'AfD', seats: 83, color: '#0EA5E9' } ] },
+  usSenate: { name: "US Senate (100 Seats)", numRows: 5, seatRadius: 9.5, parties: [
+    { id: '1', name: 'Democrats', seats: 48, color: '#2563EB' },
+    { id: '2', name: 'Independents', seats: 3, color: '#10B981' },
+    { id: '3', name: 'Republicans', seats: 49, color: '#EF4444' } ] },
+  empty: { name: "Empty / Start from Scratch", numRows: 5, seatRadius: 9, parties: [] }
+};
+ 
+// Split `total` as evenly as possible into `n` parts (never negative)
+const splitEven = (total, n) => Array.from({ length: n }, (_, i) =>
+  Math.floor(total / n) + (i < total % n ? 1 : 0));
+ 
+// Distribute seats over concentric rows proportional to radius
+const ringRows = (total, n, inner, outer) => {
+  const rows = Array.from({ length: n }, (_, r) => ({
+    radius: inner + (r * (outer - inner)) / (n - 1 || 1), seats: 0 }));
+  const sum = rows.reduce((s, r) => s + r.radius, 0);
+  let used = 0;
+  rows.forEach(r => { r.seats = Math.floor(total * r.radius / sum); used += r.seats; });
+  for (let rem = total - used, i = n - 1; rem > 0; rem--, i = (i - 1 + n) % n) rows[i].seats++;
+  return rows;
+};
+ 
+function App() {
+  const [darkMode, setDarkMode] = useState(true);
+  const [activeTab, setActiveTab] = useState('parties');
+  const [layoutStyle, setLayoutStyle] = useState('semicircle');
+  const [presetKey, setPresetKey] = useState('demo100');
+  const [parties, setParties] = useState(PRESETS.demo100.parties);
+  const [targetSeatsInput, setTargetSeatsInput] = useState("100");
+  const [numRows, setNumRows] = useState(5);
+  const [paddingAngle, setPaddingAngle] = useState(5);
+  const [seatRadius, setSeatRadius] = useState(9);
+  const [innerRadius, setInnerRadius] = useState(150);
+  const [outerRadius, setOuterRadius] = useState(300);
+  const [selectedParties, setSelectedParties] = useState(new Set());
+  const [hoveredParty, setHoveredParty] = useState(null);
+  const [hoveredSeat, setHoveredSeat] = useState(null);
+ 
+  const totalSeats = useMemo(() => parties.reduce((s, p) => s + p.seats, 0), [parties]);
+  const majorityThreshold = totalSeats > 0 ? Math.floor(totalSeats / 2) + 1 : 0;
+ 
+  useEffect(() => { if (totalSeats > 0) setTargetSeatsInput(String(totalSeats)); }, [totalSeats]);
+ 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    document.body.className = darkMode
+      ? "bg-slate-900 text-slate-100 min-h-screen"
+      : "bg-slate-50 text-slate-900 min-h-screen";
+  }, [darkMode]);
+ 
+  const autoOptimizeLayoutForCount = (n) => {
+    const [rows, size] = n <= 100 ? [5, 9] : n <= 250 ? [8, 7.5] : n <= 450 ? [11, 6]
+      : n <= 800 ? [14, 4.5] : [18, 3.5];
+    setNumRows(rows); setSeatRadius(size);
+  };
+ 
+  const handleScaleTotalSeats = (value) => {
+    const target = parseInt(value);
+    if (isNaN(target) || target < 1 || parties.length === 0 || totalSeats === 0) return;
+    const items = parties.map(p => {
+      const exact = (p.seats / totalSeats) * target;
+      return { id: p.id, share: Math.floor(exact), rem: exact - Math.floor(exact) };
+    });
+    let leftover = target - items.reduce((s, i) => s + i.share, 0);
+    [...items].sort((a, b) => b.rem - a.rem).forEach(i => { if (leftover > 0) { i.share++; leftover--; } });
+    const map = Object.fromEntries(items.map(i => [i.id, i.share]));
+    setParties(parties.map(p => ({ ...p, seats: map[p.id] })));
+    autoOptimizeLayoutForCount(target);
+  };
+ 
+  const loadPreset = (key) => {
+    const p = PRESETS[key];
+    setPresetKey(key);
+    setParties(p.parties.map(x => ({ ...x })));
+    setNumRows(p.numRows);
+    setSeatRadius(p.seatRadius);
+    setSelectedParties(new Set());
+  };
+ 
+  const addParty = () => {
+    const colors = ['#EF4444', '#3B82F6', '#10B981', '#FACC15', '#EC4899', '#8B5CF6', '#F97316', '#06B6D4'];
+    setParties([...parties, { id: Date.now().toString(), name: `Party ${parties.length + 1}`,
+      seats: 15, color: colors[parties.length % colors.length] }]);
+  };
+ 
+  const deleteParty = (id) => {
+    setParties(parties.filter(p => p.id !== id));
+    const next = new Set(selectedParties); next.delete(id); setSelectedParties(next);
+  };
+ 
+  const updateParty = (id, field, value) => setParties(parties.map(p => {
+    if (p.id !== id) return p;
+    return { ...p, [field]: field === 'seats' ? Math.max(0, parseInt(value) || 0) : value };
+  }));
+ 
+  const togglePartySelection = (id) => {
+    const next = new Set(selectedParties);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedParties(next);
+  };
+ 
+  const seats = useMemo(() => {
+    if (totalSeats === 0) return [];
+    const out = [];
+    const n = Math.max(1, numRows);
+ 
+    if (layoutStyle === 'semicircle') {
+      const pad = (paddingAngle * Math.PI) / 180;
+      const start = Math.PI - pad, range = Math.PI - 2 * pad;
+      ringRows(totalSeats, n, innerRadius, outerRadius).forEach(row => {
+        for (let s = 0; s < row.seats; s++) {
+          const angle = start - (s * range) / (row.seats - 1 || 1);
+          out.push({ x: row.radius * Math.cos(angle), y: -row.radius * Math.sin(angle), angle });
         }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+      });
+      out.sort((a, b) => b.angle - a.angle);
+    } else if (layoutStyle === 'fullcircle') {
+      ringRows(totalSeats, n, innerRadius, outerRadius).forEach(row => {
+        for (let s = 0; s < row.seats; s++) {
+          const angle = Math.PI + (s * 2 * Math.PI) / row.seats;
+          out.push({ x: row.radius * Math.cos(angle), y: row.radius * Math.sin(angle), angle });
+        }
+      });
+      out.sort((a, b) => a.angle - b.angle);
+    } else if (layoutStyle === 'classroom') {
+      const rowHeight = (outerRadius - innerRadius) / (n - 1 || 1);
+      splitEven(totalSeats, n).forEach((count, r) => {
+        const width = 240 + r * 30;
+        for (let s = 0; s < count; s++) {
+          out.push({ x: count > 1 ? -width / 2 + (s * width) / (count - 1) : 0,
+                     y: -(innerRadius + r * rowHeight) });
+        }
+      });
+      out.sort((a, b) => a.x - b.x);
+    } else if (layoutStyle === 'westminster') {
+      const benches = Math.max(2, Math.floor(n / 2));
+      const left = Math.ceil(totalSeats / 2);
+      [[-1, left], [1, totalSeats - left]].forEach(([dir, sideTotal]) => {
+        splitEven(sideTotal, benches).forEach((count, b) => {
+          const x = dir * (30 + b * 28);
+          const startY = -220 - ((count - 1) * 20) / 2;
+          for (let s = 0; s < count; s++) out.push({ x, y: startY + s * 20 });
+        });
+      });
+      out.sort((a, b) => a.x - b.x);
+    }
+ 
+    let i = 0;
+    parties.forEach(party => {
+      for (let k = 0; k < party.seats && i < out.length; k++, i++) out[i].party = party;
+    });
+    out.forEach((s, idx) => { s.id = `seat-${idx}`; });
+    return out;
+  }, [parties, totalSeats, numRows, paddingAngle, innerRadius, outerRadius, layoutStyle]);
+ 
+  // FIX: fit the viewBox to the actual seats so no layout gets clipped
+  const viewBox = useMemo(() => {
+    if (!seats.length) return "-350 -350 700 400";
+    const m = seatRadius * 2;
+    const xs = seats.map(s => s.x), ys = seats.map(s => s.y);
+    const x0 = Math.min(...xs) - m, x1 = Math.max(...xs) + m;
+    const y0 = Math.min(...ys) - m, y1 = Math.max(...ys) + m;
+    return `${x0} ${y0} ${x1 - x0} ${y1 - y0}`;
+  }, [seats, seatRadius]);
+ 
+  const coalitionSeatsTotal = parties.filter(p => selectedParties.has(p.id)).reduce((s, p) => s + p.seats, 0);
+  const inputCls = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg";
+ 
+  const Slider = ({ label, unit = "", value, set, min, max, step = 1, parse = parseInt }) => (
+    <div>
+      <div className="flex justify-between text-xs font-medium mb-1"><span>{label}</span><span>{value}{unit}</span></div>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => set(parse(e.target.value))} className="w-full accent-indigo-600" />
+    </div>
+  );
+ 
+  return (
+    <div className="flex flex-col min-h-screen">
+      <header className="border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold tracking-tight">Parliament Customizer & Visualizer</h1>
+        <button onClick={() => setDarkMode(!darkMode)}
+          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+          {darkMode ? '☀️ Light' : '🌙 Dark'}
+        </button>
+      </header>
+ 
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+        <div className="lg:col-span-4 flex flex-col gap-6 bg-white dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 block">Presets</label>
+            <select value={presetKey} onChange={e => loadPreset(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm">
+              {Object.entries(PRESETS).map(([k, p]) => <option key={k} value={k}>{p.name}</option>)}
+            </select>
+          </div>
+ 
+          <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+            {[['parties', `Parties (${parties.length})`], ['layout', 'Layout Controls']].map(([k, label]) => (
+              <button key={k} onClick={() => setActiveTab(k)}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === k ? 'bg-white dark:bg-slate-800 shadow' : 'text-slate-500'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+ 
+          {activeTab === 'parties' && (
+            <div className="flex flex-col gap-4 overflow-y-auto max-h-[500px] pr-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold">Total Seats: {totalSeats}</span>
+                <button onClick={addParty} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg">+ Add Party</button>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-medium text-slate-500">Scale to:</span>
+                <input type="number" value={targetSeatsInput} onChange={e => setTargetSeatsInput(e.target.value)}
+                  className={`w-20 px-2 py-1 text-xs text-center ${inputCls}`} />
+                <button onClick={() => handleScaleTotalSeats(targetSeatsInput)}
+                  className="px-2.5 py-1 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg">Apply</button>
+              </div>
+              {parties.map(party => (
+                <div key={party.id}
+                  onMouseEnter={() => setHoveredParty(party.id)} onMouseLeave={() => setHoveredParty(null)}
+                  className={`p-3 rounded-xl border transition flex flex-col gap-2 ${selectedParties.has(party.id) ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <input type="color" value={party.color} onChange={e => updateParty(party.id, 'color', e.target.value)}
+                      className="w-6 h-6 rounded border-0 cursor-pointer bg-transparent" />
+                    <input type="text" value={party.name} onChange={e => updateParty(party.id, 'name', e.target.value)}
+                      className="flex-1 min-w-0 bg-transparent font-medium text-sm focus:outline-none border-b border-transparent focus:border-indigo-500" />
+                    <button onClick={() => togglePartySelection(party.id)}
+                      className={`px-2 py-0.5 text-xs rounded border ${selectedParties.has(party.id) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}>Coalition</button>
+                    <button onClick={() => deleteParty(party.id)} className="text-slate-400 hover:text-red-500 text-xs px-1">✕</button>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>Seats:</span>
+                    <input type="number" min="0" value={party.seats} onChange={e => updateParty(party.id, 'seats', e.target.value)}
+                      className={`w-16 px-1.5 py-0.5 text-right font-medium text-slate-900 dark:text-slate-100 ${inputCls}`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+ 
+          {activeTab === 'layout' && (
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1 block">Seating Layout Style</label>
+                <select value={layoutStyle} onChange={e => setLayoutStyle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm">
+                  <option value="semicircle">Hemicycle / Semicircle</option>
+                  <option value="fullcircle">Full Circle</option>
+                  <option value="classroom">Classroom / Grid</option>
+                  <option value="westminster">Westminster / Benches</option>
+                </select>
+              </div>
+              <Slider label="Number of Rows" value={numRows} set={setNumRows} min={1} max={25} />
+              <Slider label="Seat Size" unit="px" value={seatRadius} set={setSeatRadius} min={2} max={15} step={0.5} parse={parseFloat} />
+              {layoutStyle === 'semicircle' && <Slider label="Side Margin Angle" unit="°" value={paddingAngle} set={setPaddingAngle} min={0} max={30} />}
+              <Slider label="Inner Radius" unit="px" value={innerRadius} set={setInnerRadius} min={50} max={250} />
+              <Slider label="Outer Radius" unit="px" value={outerRadius} set={setOuterRadius} min={200} max={450} />
+            </div>
+          )}
+        </div>
+ 
+        <div className="lg:col-span-8 bg-white dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between items-center relative overflow-hidden min-h-[500px]">
+          {selectedParties.size > 0 && (
+            <div className="w-full bg-indigo-600 text-white p-3 rounded-xl shadow-lg flex items-center justify-between z-10 mb-2">
+              <span className="font-bold text-sm">Selected Coalition <span className="text-xs font-normal opacity-90">({selectedParties.size} parties)</span></span>
+              <div className="flex items-center gap-4 text-sm font-semibold">
+                <span>Seats: {coalitionSeatsTotal} / {totalSeats}</span>
+                <span className={`px-2 py-0.5 rounded text-xs ${coalitionSeatsTotal >= majorityThreshold ? 'bg-emerald-500' : 'bg-indigo-800 text-indigo-200'}`}>
+                  {coalitionSeatsTotal >= majorityThreshold ? 'Majority Secured' : `Needs ${majorityThreshold - coalitionSeatsTotal} more`}
+                </span>
+              </div>
+            </div>
+          )}
+ 
+          <div className="w-full flex-1 flex items-center justify-center">
+            <svg viewBox={viewBox} className="w-full h-full max-h-[500px]">
+              {seats.map(seat => {
+                const isHovered = hoveredSeat === seat.id || (hoveredParty && seat.party?.id === hoveredParty);
+                const inCoalition = seat.party && selectedParties.has(seat.party.id);
+                let opacity = 1;
+                if (selectedParties.size > 0 && !inCoalition) opacity = 0.25;
+                if (hoveredParty && seat.party?.id !== hoveredParty) opacity = 0.2;
+                return (
+                  <circle key={seat.id} cx={seat.x} cy={seat.y}
+                    r={isHovered ? seatRadius * 1.3 : seatRadius}
+                    fill={seat.party ? seat.party.color : '#94a3b8'} opacity={opacity}
+                    stroke={isHovered ? '#ffffff' : 'none'} strokeWidth="2"
+                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredSeat(seat.id)} onMouseLeave={() => setHoveredSeat(null)}>
+                    <title>{seat.party ? `${seat.party.name} (${seat.party.seats} seats)` : 'Unassigned'}</title>
+                  </circle>
+                );
+              })}
+            </svg>
+          </div>
+ 
+          <div className="w-full pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <div>Majority Threshold: <span className="font-semibold text-slate-700 dark:text-slate-300">{majorityThreshold} Seats</span></div>
+            <div className="flex flex-wrap gap-4">
+              {parties.map(p => (
+                <div key={p.id} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }}></span>
+                  <span>{p.name}: {p.seats}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ 
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
 </body>
 </html>
