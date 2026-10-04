@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,6 +22,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
+    <!-- Login Card -->
     <div id="card" class="w-full max-w-md bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-700/50 p-8 shadow-2xl transition-all duration-300">
         
         <!-- Header -->
@@ -51,11 +51,20 @@
         </button>
     </div>
 
+    <!-- Dashboard View (Initially Hidden) -->
+    <div id="dashboard" class="hidden text-center max-w-lg w-full bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-700/50 p-10 shadow-2xl">
+        <h1 class="text-5xl font-extrabold text-white tracking-tight mb-8">Dashboard</h1>
+        <button class="px-6 py-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-200 shadow-lg shadow-indigo-600/20 active:scale-95">
+            Calendar
+        </button>
+    </div>
+
     <script>
         const inputs = document.querySelectorAll('.otp-input');
         const submitBtn = document.getElementById('submit-btn');
         const message = document.getElementById('message');
         const card = document.getElementById('card');
+        const dashboard = document.getElementById('dashboard');
         const VALID_CODE = "1753";
 
         // Auto-focus first input on page load
@@ -134,17 +143,18 @@
             message.classList.add('opacity-0');
         }
 
-        // Validate code and execute redirection or error animation
+        // Validate code and execute view change or error animation
         function validateAndRedirect() {
             const code = getCode();
 
             if (code === VALID_CODE) {
-                showMessage("Success! Redirecting...", false);
+                showMessage("Success! Loading dashboard...", false);
                 inputs.forEach(i => i.classList.add('border-emerald-500', 'text-emerald-400'));
                 
-                // Redirect after brief visual confirmation
+                // Reveal dashboard after brief visual confirmation
                 setTimeout(() => {
-                    window.location.href = "dashboard.html";
+                    card.classList.add('hidden');
+                    dashboard.classList.remove('hidden');
                 }, 800);
             } else {
                 showMessage("Incorrect code. Please try again.", true);
@@ -174,4 +184,3 @@
     </script>
 </body>
 </html>
-```
