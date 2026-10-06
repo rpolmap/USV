@@ -125,71 +125,24 @@ const mk = (name, seats, color) => ({ id: uid(), name, seats, color });
 const mv = (name, pct, color) => ({ id: uid(), name, pct, color });
 const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
 
-function makeEqualParties(builderFn, list) {
-  const count = list.length;
-  const baseVal = Math.floor(1000 / count) / 10;
-  return list.map(([name, color], idx) => {
-    const v = idx === 0 ? Math.round((100 - baseVal * (count - 1)) * 10) / 10 : baseVal;
-    return builderFn(name, v, color);
-  });
-}
-
-function makeEqualSeats(list, totalSeats) {
-  const count = list.length;
-  const base = Math.floor(totalSeats / count);
-  const rem = totalSeats % count;
-  return list.map(([name, color], i) => mk(name, base + (i < rem ? 1 : 0), color));
-}
-
-const AMERICAN_REPUBLIC_RAW = [
-  ['Libertarians', '#f59e0b'],
-  ['Progressives', '#ec4899'],
-  ['Republicans', '#dc2626'],
-  ['Democrats', '#2563eb'],
-  ['UPP', '#16a34a'],
-  ['AFP', '#1e3a8a'],
-  ['Socialists', '#991b1b'],
-  ['Greens', '#84cc16']
-];
-
-const NUBRIA_RAW = [
-  ['Left', '#ec4899'],
-  ['SDU', '#dc2626'],
-  ['EMP', '#f97316'],
-  ['DPP', '#2563eb'],
-  ['FLP', '#eab308'],
-  ['LO', '#000000'],
-  ['OI!', '#06b6d4']
-];
-
 const PRESETS = {
-  american: {
-    label: 'American Republic (435)',
-    rows: 10,
-    size: 7,
-    parties: () => makeEqualSeats(AMERICAN_REPUBLIC_RAW, 435)
-  },
-  nubria: {
-    label: 'Nubria (600)',
-    rows: 11,
-    size: 6,
-    parties: () => makeEqualSeats(NUBRIA_RAW, 600)
-  },
+  three: { label: 'Three parties (100)', rows: 5, size: 11, parties: () => [mk('Blue', 45, '#2563eb'), mk('Red', 35, '#e11d48'), mk('Green', 20, '#16a34a')] },
+  bundestag: { label: 'Bundestag 2021 (736)', rows: 12, size: 5, parties: () => [
+    mk('Linke', 39, '#be3075'), mk('SPD', 206, '#e3000f'), mk('Grüne', 118, '#46962b'), mk('SSW', 1, '#003c8f'),
+    mk('FDP', 92, '#ffcc00'), mk('CDU/CSU', 197, '#444444'), mk('AfD', 83, '#009ee0')] },
+  senate: { label: 'US Senate (100)', rows: 5, size: 11, parties: () => [mk('Democrats', 45, '#2563eb'), mk('Independents', 2, '#8b5cf6'), mk('Republicans', 53, '#dc2626')] },
   empty: { label: 'Empty', rows: 5, size: 10, parties: () => [] },
 };
 
 const VPRESETS = {
-  american: {
-    label: 'American Republic (100 %)',
-    parties: () => makeEqualParties(mv, AMERICAN_REPUBLIC_RAW)
-  },
-  nubria: {
-    label: 'Nubria (100 %)',
-    parties: () => makeEqualParties(mv, NUBRIA_RAW)
-  },
+  three: { label: 'Three parties (100 %)', parties: () => [mv('Blue', 45, '#2563eb'), mv('Red', 35, '#e11d48'), mv('Green', 20, '#16a34a')] },
+  bundestag: { label: 'Bundestag 2021 (second votes)', parties: () => [
+    mv('SPD', 25.7, '#e3000f'), mv('CDU/CSU', 24.1, '#444444'), mv('Grüne', 14.8, '#46962b'), mv('FDP', 11.5, '#ffcc00'),
+    mv('AfD', 10.3, '#009ee0'), mv('Linke', 4.9, '#be3075'), mv('Others', 8.7, '#9ca3af')] },
   empty: { label: 'Empty', parties: () => [] },
 };
 
+// Largest-remainder distribution of N proportional to weights
 function distribute(N, weights) {
   const s = weights.reduce((a, b) => a + b, 0);
   if (!s) return weights.map(() => 0);
@@ -232,6 +185,7 @@ function Header({ title, onBack }) {
     <div className="top">
       <h1>{title}</h1>
       <button className="back" type="button" onClick={onBack}>&larr; Change mode</button>
+      <a className="back" href="index.html">Back to Providence</a>
     </div>
   );
 }
@@ -273,7 +227,7 @@ function Start({ onPick }) {
 
 /* ---------------- Votes helpers ---------------- */
 const ink = hex => {
-  const n = parseInt(hex.replace('#',''), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
   return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#14161a' : '#ffffff';
 };
 function arcPath(cx, cy, r0, r1, a0, a1) {
@@ -345,6 +299,7 @@ function VoteChart({ list, type, total, dec, showVals, threshold, hover, setHove
       </svg>
     );
   }
+  // stacked
   let x = 0;
   return (
     <svg viewBox="0 0 640 110">
@@ -364,8 +319,8 @@ function VoteChart({ list, type, total, dec, showVals, threshold, hover, setHove
 /* ---------------- Votes ---------------- */
 function VotesApp({ onBack }) {
   const [dark, setDark] = useTheme();
-  const [preset, setPreset] = useState('american');
-  const [parties, setParties] = useState(VPRESETS.american.parties());
+  const [preset, setPreset] = useState('bundestag');
+  const [parties, setParties] = useState(VPRESETS.bundestag.parties());
   const [tab, setTab] = useState('parties');
   const [type, setType] = useState('bars');
   const [sort, setSort] = useState(true);
@@ -405,5 +360,9 @@ function VotesApp({ onBack }) {
                   <div className="row">
                     <input type="color" value={p.color} onChange={e => update(p.id, { color: e.target.value })} />
                     <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { name: e.target.value })} />
-                    <input className="field" style={{ width: '4.5rem' }} type="number" step="0.1" value={p.pct} onChange={e => update(p.id, { pct: Math.max(0, +e.target.value) })} />
-                    <button type="button
+                    <button className="del" type="button" onClick={() => remove(p.id)} title="Delete" aria-label="Delete party">&times;</button>
+                  </div>
+                  <div className="row">
+                    <input type="number" min="0" max="100" step="0.1" className="field" style={{ width: '6rem' }} value={p.pct}
+                      onChange={e => update(p.id, { pct: Math.max(0, parseFloat(e.target.value) || 0) })} />
+                    <span className="muted">%</sp
