@@ -91,6 +91,8 @@
   .party input[type=color] { width: 2.2rem; height: 2.2rem; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: transparent; cursor: pointer; flex: none; }
   .del { background: none; border: none; color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer; padding: 0 .25rem; }
   .del:hover { color: var(--fg); }
+  .del:disabled { opacity: .25; cursor: default; }
+  .del:disabled:hover { color: var(--muted); }
   .muted { color: var(--muted); }
   .party-list { display: flex; flex-direction: column; gap: .5rem; }
   .slider { display: block; font-size: .875rem; }
@@ -295,6 +297,11 @@ function VotesApp() {
   const total = Math.round(parties.reduce((a, p) => a + p.pct, 0) * 1000) / 1000;
   const list = useMemo(() => sort ? [...parties].sort((a, b) => b.pct - a.pct) : parties, [parties, sort]);
   const update = (id, patch) => setParties(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p));
+  const move = (id, d) => { setSort(false); setParties(ps => {
+    const i = ps.findIndex(p => p.id === id), j = i + d;
+    if (j < 0 || j >= ps.length) return ps;
+    const a = [...ps]; [a[i], a[j]] = [a[j], a[i]]; return a;
+  }); };
   const remove = id => setParties(ps => ps.filter(p => p.id !== id));
   const add = () => setParties(ps => [...ps, mv('Party ' + (ps.length + 1), 5, PALETTE[ps.length % PALETTE.length])]);
   const normalize = () => total && setParties(ps => ps.map(p => ({ ...p, pct: Math.round(p.pct / total * 1000) / 10 })));
@@ -322,6 +329,8 @@ function VotesApp() {
                   <div className="row">
                     <input type="color" value={p.color} onChange={e => update(p.id, { color: e.target.value })} />
                     <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { name: e.target.value })} />
+                    <button className="del" type="button" onClick={() => move(p.id, -1)} disabled={parties[0].id === p.id} title="Move up" aria-label="Move party up">&uarr;</button>
+                    <button className="del" type="button" onClick={() => move(p.id, 1)} disabled={parties[parties.length - 1].id === p.id} title="Move down" aria-label="Move party down">&darr;</button>
                     <button className="del" type="button" onClick={() => remove(p.id)} title="Delete" aria-label="Delete party">&times;</button>
                   </div>
                   <div className="row">
