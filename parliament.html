@@ -125,20 +125,70 @@ const mk = (name, seats, color) => ({ id: uid(), name, seats, color });
 const mv = (name, pct, color) => ({ id: uid(), name, pct, color });
 const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
 
+// Helper to evenly split seats/pct across N parties
+function makeEqualParties(builderFn, list) {
+  const count = list.length;
+  const baseVal = Math.floor(1000 / count) / 10;
+  return list.map(([name, color], idx) => {
+    // distribute remainder to first party if needed
+    const v = idx === 0 ? Math.round((100 - baseVal * (count - 1)) * 10) / 10 : baseVal;
+    return builderFn(name, v, color);
+  });
+}
+
+function makeEqualSeats(list, totalSeats) {
+  const count = list.length;
+  const base = Math.floor(totalSeats / count);
+  const rem = totalSeats % count;
+  return list.map(([name, color], i) => mk(name, base + (i < rem ? 1 : 0), color));
+}
+
+const AMERICAN_REPUBLIC_RAW = [
+  ['Libertarians', '#f59e0b'],
+  ['Progressives', '#ec4899'],
+  ['Republicans', '#dc2626'],
+  ['Democrats', '#2563eb'],
+  ['UPP', '#16a34a'],
+  ['AFP', '#1e3a8a'],
+  ['Socialists', '#991b1b'],
+  ['Greens', '#84cc16']
+];
+
+const NUBRIA_RAW = [
+  ['Left', '#ec4899'],
+  ['SDU', '#dc2626'],
+  ['EMP', '#f97316'],
+  ['DPP', '#2563eb'],
+  ['FLP', '#eab308'],
+  ['LO', '#000000'],
+  ['OI!', '#06b6d4']
+];
+
 const PRESETS = {
-  three: { label: 'Three parties (100)', rows: 5, size: 11, parties: () => [mk('Blue', 45, '#2563eb'), mk('Red', 35, '#e11d48'), mk('Green', 20, '#16a34a')] },
-  bundestag: { label: 'Bundestag 2021 (736)', rows: 12, size: 5, parties: () => [
-    mk('Linke', 39, '#be3075'), mk('SPD', 206, '#e3000f'), mk('Grüne', 118, '#46962b'), mk('SSW', 1, '#003c8f'),
-    mk('FDP', 92, '#ffcc00'), mk('CDU/CSU', 197, '#444444'), mk('AfD', 83, '#009ee0')] },
-  senate: { label: 'US Senate (100)', rows: 5, size: 11, parties: () => [mk('Democrats', 45, '#2563eb'), mk('Independents', 2, '#8b5cf6'), mk('Republicans', 53, '#dc2626')] },
+  american: {
+    label: 'American Republic (435)',
+    rows: 10,
+    size: 7,
+    parties: () => makeEqualSeats(AMERICAN_REPUBLIC_RAW, 435)
+  },
+  nubria: {
+    label: 'Nubria (600)',
+    rows: 11,
+    size: 6,
+    parties: () => makeEqualSeats(NUBRIA_RAW, 600)
+  },
   empty: { label: 'Empty', rows: 5, size: 10, parties: () => [] },
 };
 
 const VPRESETS = {
-  three: { label: 'Three parties (100 %)', parties: () => [mv('Blue', 45, '#2563eb'), mv('Red', 35, '#e11d48'), mv('Green', 20, '#16a34a')] },
-  bundestag: { label: 'Bundestag 2021 (second votes)', parties: () => [
-    mv('SPD', 25.7, '#e3000f'), mv('CDU/CSU', 24.1, '#444444'), mv('Grüne', 14.8, '#46962b'), mv('FDP', 11.5, '#ffcc00'),
-    mv('AfD', 10.3, '#009ee0'), mv('Linke', 4.9, '#be3075'), mv('Others', 8.7, '#9ca3af')] },
+  american: {
+    label: 'American Republic (100 %)',
+    parties: () => makeEqualParties(mv, AMERICAN_REPUBLIC_RAW)
+  },
+  nubria: {
+    label: 'Nubria (100 %)',
+    parties: () => makeEqualParties(mv, NUBRIA_RAW)
+  },
   empty: { label: 'Empty', parties: () => [] },
 };
 
@@ -227,7 +277,7 @@ function Start({ onPick }) {
 
 /* ---------------- Votes helpers ---------------- */
 const ink = hex => {
-  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const n = parseInt(hex.replace('#',''), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
   return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#14161a' : '#ffffff';
 };
 function arcPath(cx, cy, r0, r1, a0, a1) {
@@ -319,8 +369,8 @@ function VoteChart({ list, type, total, dec, showVals, threshold, hover, setHove
 /* ---------------- Votes ---------------- */
 function VotesApp({ onBack }) {
   const [dark, setDark] = useTheme();
-  const [preset, setPreset] = useState('bundestag');
-  const [parties, setParties] = useState(VPRESETS.bundestag.parties());
+  const [preset, setPreset] = useState('american');
+  const [parties, setParties] = useState(VPRESETS.american.parties());
   const [tab, setTab] = useState('parties');
   const [type, setType] = useState('bars');
   const [sort, setSort] = useState(true);
@@ -359,254 +409,4 @@ function VotesApp({ onBack }) {
                 <div key={p.id} className="party" onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}>
                   <div className="row">
                     <input type="color" value={p.color} onChange={e => update(p.id, { color: e.target.value })} />
-                    <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { name: e.target.value })} />
-                    <button className="del" type="button" onClick={() => remove(p.id)} title="Delete" aria-label="Delete party">&times;</button>
-                  </div>
-                  <div className="row">
-                    <input type="number" min="0" max="100" step="0.1" className="field" style={{ width: '6rem' }} value={p.pct}
-                      onChange={e => update(p.id, { pct: Math.max(0, parseFloat(e.target.value) || 0) })} />
-                    <span className="muted">%</span>
-                  </div>
-                </div>
-              ))}
-              <button type="button" className="btn ghost block" onClick={add}>+ Add party</button>
-            </div>
-          ) : (
-            <div className="controls">
-              <select value={type} onChange={e => setType(e.target.value)} className="field">
-                <option value="bars">Horizontal bars</option>
-                <option value="columns">Columns</option>
-                <option value="pie">Pie</option>
-                <option value="donut">Donut</option>
-                <option value="stacked">Stacked bar</option>
-              </select>
-              <label className="row"><input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={sort} onChange={e => setSort(e.target.checked)} /> Sort by result</label>
-              <label className="row"><input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={showVals} onChange={e => setShowVals(e.target.checked)} /> Show values</label>
-              <Slider label="Decimals" v={dec} set={setDec} min={0} max={2} />
-              <label className="row"><input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={useTh} onChange={e => setUseTh(e.target.checked)} /> Threshold line (bar &amp; column charts)</label>
-              {useTh && <Slider label="Threshold (%)" v={th} set={setTh} min={0.5} max={10} step={0.5} />}
-            </div>
-          )}
-        </aside>
-
-        <main className="panel">
-          {parties.length > 0 && (
-            <div className={'banner' + (!off ? ' ok' : '')}>
-              Total: {total.toFixed(1)}% {off ? '— does not add up to 100%' : '✓'}
-              {off && <button type="button" className="btn" onClick={normalize}>Normalize to 100%</button>}
-            </div>
-          )}
-          <div className="chart">
-            {list.length && total ? <VoteChart list={list} type={type} total={total} dec={dec} showVals={showVals} threshold={useTh ? th : 0} hover={hover} setHover={setHover} />
-              : <p className="muted">Add a party with a percentage to draw the chart.</p>}
-          </div>
-          <footer>
-            <div className="legend">
-              {list.map(p => <span key={p.id}><i className="dot" style={{ background: p.color }}></i>{p.name} ({p.pct.toFixed(dec)}%)</span>)}
-            </div>
-            {below.length > 0 && <div className="muted">Below {th}%: {below.map(p => p.name).join(', ')}</div>}
-          </footer>
-        </main>
-      </div>
-    </>
-  );
-}
-
-/* ---------------- Seats ---------------- */
-function SeatsApp({ onBack }) {
-  const [parties, setParties] = useState(PRESETS.three.parties());
-  const [layout, setLayout] = useState('hemicycle');
-  const [rows, setRows] = useState(5);
-  const [size, setSize] = useState(11);
-  const [margin, setMargin] = useState(8);
-  const [inner, setInner] = useState(120);
-  const [outer, setOuter] = useState(400);
-  const [coalition, setCoalition] = useState([]);
-  const [hoverParty, setHoverParty] = useState(null);
-  const [hoverSeat, setHoverSeat] = useState(null);
-  const [tab, setTab] = useState('parties');
-  const [dark, setDark] = useTheme();
-  const [preset, setPreset] = useState('three');
-  const [scaleTo, setScaleTo] = useState(100);
-
-  const total = parties.reduce((a, p) => a + p.seats, 0);
-  const majority = Math.floor(total / 2) + 1;
-  const coalSeats = parties.filter(p => coalition.includes(p.id)).reduce((a, p) => a + p.seats, 0);
-
-  const seats = useMemo(() => {
-    if (!total) return [];
-    const R = Math.max(1, rows);
-    const radii = Array.from({ length: R }, (_, i) => R === 1 ? (inner + outer) / 2 : inner + (outer - inner) * i / (R - 1));
-    let pts = [];
-    if (layout === 'hemicycle' || layout === 'circle') {
-      const hemi = layout === 'hemicycle';
-      const m = hemi ? margin * Math.PI / 180 : 0;
-      const span = hemi ? Math.PI - 2 * m : 2 * Math.PI;
-      const counts = ringRows(total, radii);
-      radii.forEach((r, i) => {
-        const n = counts[i];
-        for (let k = 0; k < n; k++) {
-          const f = hemi ? (n === 1 ? 0.5 : k / (n - 1)) : k / n;
-          const t = (hemi ? Math.PI - m : Math.PI) - f * span;
-          pts.push({ x: r * Math.cos(t), y: -r * Math.sin(t), key: Math.PI - t, r });
-        }
-      });
-      pts.sort((a, b) => a.key - b.key || a.r - b.r);
-    } else if (layout === 'classroom') {
-      const sp = size * 2.6;
-      distribute(total, radii.map((_, i) => i + 3)).forEach((n, i) => {
-        for (let k = 0; k < n; k++) pts.push({ x: Math.round((k - (n - 1) / 2) * sp * 10) / 10, y: i * sp * 1.4 });
-      });
-      pts.sort((a, b) => a.x - b.x || a.y - b.y);
-    } else {
-      const sp = size * 2.6;
-      const L = Math.ceil(total / 2);
-      [[L, -1], [total - L, 1]].forEach(([n, s]) => {
-        for (let j = 0; j < n; j++) {
-          const col = j % R, row = Math.floor(j / R);
-          pts.push({ x: s * (inner / 2 + 20 + col * sp), y: row * sp });
-        }
-      });
-      pts.sort((a, b) => a.x - b.x || a.y - b.y);
-    }
-    let idx = 0;
-    parties.forEach((p, pi) => { for (let c = 0; c < p.seats && idx < pts.length; c++) pts[idx++].p = pi; });
-    return pts;
-  }, [parties, layout, rows, size, margin, inner, outer, total]);
-
-  const viewBox = useMemo(() => {
-    if (!seats.length) return '0 0 100 100';
-    const pad = size * 2;
-    const xs = seats.map(s => s.x), ys = seats.map(s => s.y);
-    const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad;
-    return `${x0} ${y0} ${Math.max(...xs) + pad - x0} ${Math.max(...ys) + pad - y0}`;
-  }, [seats, size]);
-
-  const update = (id, patch) => setParties(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p));
-  const toggleCoal = id => setCoalition(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id]);
-  const remove = id => { setParties(ps => ps.filter(p => p.id !== id)); setCoalition(c => c.filter(x => x !== id)); };
-  const add = () => setParties(ps => [...ps, mk('Party ' + (ps.length + 1), 10, PALETTE[ps.length % PALETTE.length])]);
-  const loadPreset = key => {
-    const pr = PRESETS[key];
-    const ps = pr.parties();
-    setPreset(key); setParties(ps); setRows(pr.rows); setSize(pr.size); setCoalition([]);
-    setScaleTo(ps.reduce((a, p) => a + p.seats, 0));
-  };
-  const scale = () => {
-    const t = Math.max(0, Math.round(scaleTo) || 0);
-    if (!total || !parties.length) return;
-    const counts = distribute(t, parties.map(p => p.seats));
-    setParties(ps => ps.map((p, i) => ({ ...p, seats: counts[i] })));
-    const r = rowsFor(t);
-    setRows(r); setSize(sizeFor(t, r));
-  };
-
-  return (
-    <>
-      <ThemeSwitch dark={dark} setDark={setDark} />
-      <Header title="Seats" onBack={onBack} />
-
-      <div className="layout">
-        <aside className="panel">
-          <select value={preset} onChange={e => loadPreset(e.target.value)} className="field">
-            {Object.entries(PRESETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-          <div className="tabs">
-            {[['parties', 'Parties'], ['layout', 'Layout Controls']].map(([k, l]) => (
-              <button key={k} type="button" onClick={() => setTab(k)} className={'btn tab' + (tab === k ? '' : ' ghost')}>{l}</button>
-            ))}
-          </div>
-
-          {tab === 'parties' ? (
-            <div className="party-list">
-              {parties.map(p => (
-                <div key={p.id} className="party" onMouseEnter={() => setHoverParty(p.id)} onMouseLeave={() => setHoverParty(null)}>
-                  <div className="row">
-                    <input type="color" value={p.color} onChange={e => update(p.id, { color: e.target.value })} />
-                    <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { name: e.target.value })} />
-                    <button className="del" type="button" onClick={() => remove(p.id)} title="Delete" aria-label="Delete party">&times;</button>
-                  </div>
-                  <div className="row">
-                    <input type="number" min="0" className="field" style={{ width: '6rem' }} value={p.seats}
-                      onChange={e => update(p.id, { seats: Math.max(0, parseInt(e.target.value) || 0) })} />
-                    <span className="muted">seats</span>
-                    <label className="row" style={{ marginLeft: 'auto', gap: '.35rem' }}>
-                      <input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={coalition.includes(p.id)} onChange={() => toggleCoal(p.id)} /> Coalition
-                    </label>
-                  </div>
-                </div>
-              ))}
-              <button type="button" className="btn ghost block" onClick={add}>+ Add party</button>
-              <div className="row" style={{ paddingTop: '.25rem' }}>
-                <span>Scale to</span>
-                <input type="number" min="1" className="field" style={{ width: '6rem' }} value={scaleTo} onChange={e => setScaleTo(+e.target.value)} />
-                <button type="button" className="btn" style={{ marginLeft: 'auto' }} onClick={scale}>Apply</button>
-              </div>
-            </div>
-          ) : (
-            <div className="controls">
-              <select value={layout} onChange={e => setLayout(e.target.value)} className="field">
-                <option value="hemicycle">Hemicycle</option>
-                <option value="circle">Full circle</option>
-                <option value="classroom">Classroom</option>
-                <option value="westminster">Westminster</option>
-              </select>
-              <Slider label="Rows" v={rows} set={setRows} min={1} max={20} />
-              <Slider label="Seat size" v={size} set={setSize} min={2} max={16} />
-              <Slider label="Margin angle" v={margin} set={setMargin} min={0} max={40} />
-              <Slider label="Inner radius" v={inner} set={setInner} min={20} max={250} />
-              <Slider label="Outer radius" v={outer} set={setOuter} min={150} max={500} />
-            </div>
-          )}
-        </aside>
-
-        <main className="panel">
-          {coalition.length > 0 && (
-            <div className={'banner' + (coalSeats >= majority ? ' ok' : '')}>
-              Coalition: {coalSeats} seats — {coalSeats >= majority ? 'Majority Secured' : `needs ${majority - coalSeats} more`}
-            </div>
-          )}
-          <div className="chart">
-            {seats.length ? (
-              <svg viewBox={viewBox}>
-                {seats.map((s, i) => {
-                  const p = parties[s.p];
-                  if (!p) return null;
-                  let op = 1;
-                  if (hoverParty && p.id !== hoverParty) op = 0.15;
-                  else if (coalition.length && !coalition.includes(p.id)) op = 0.25;
-                  return (
-                    <circle key={i} cx={s.x} cy={s.y} r={hoverSeat === i ? size * 1.35 : size} fill={p.color} opacity={op}
-                      onMouseEnter={() => setHoverSeat(i)} onMouseLeave={() => setHoverSeat(null)} style={{ transition: 'opacity .15s' }}>
-                      <title>{p.name} (seat {i + 1})</title>
-                    </circle>
-                  );
-                })}
-              </svg>
-            ) : <p className="muted">Add a party with seats to draw the chart.</p>}
-          </div>
-          <footer>
-            <div>Total seats: <b>{total}</b> · Majority threshold: <b>{majority}</b></div>
-            <div className="legend">
-              {parties.map(p => (
-                <span key={p.id}><i className="dot" style={{ background: p.color }}></i>{p.name} ({p.seats})</span>
-              ))}
-            </div>
-          </footer>
-        </main>
-      </div>
-    </>
-  );
-}
-
-function Root() {
-  const [mode, setMode] = useState(null);
-  if (mode === 'seats') return <SeatsApp onBack={() => setMode(null)} />;
-  if (mode === 'votes') return <VotesApp onBack={() => setMode(null)} />;
-  return <Start onPick={setMode} />;
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
-</script>
-</body>
-</html>
+                    <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { na
