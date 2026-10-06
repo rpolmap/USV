@@ -125,20 +125,21 @@ const mk = (name, seats, color) => ({ id: uid(), name, seats, color });
 const mv = (name, pct, color) => ({ id: uid(), name, pct, color });
 const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
 
+const REP = [['Libertarians','#facc15'],['Progressives','#ec4899'],['Republicans','#dc2626'],['Democrats','#2563eb'],
+  ['UPP','#16a34a'],['AFP','#1e3a8a'],['Socialists','#7f1d1d'],['Greens','#86efac']];
+const NUB = [['Left','#ec4899'],['SDU','#dc2626'],['EMP','#f97316'],['DPP','#2563eb'],
+  ['FLP','#facc15'],['LO','#000000'],['OI!','#4ade80']];
+const equalSeats = (N, c) => { const s = distribute(N, c.map(() => 1)); return c.map(([n, col], i) => mk(n, s[i], col)); };
+
 const PRESETS = {
-  three: { label: 'Three parties (100)', rows: 5, size: 11, parties: () => [mk('Blue', 45, '#2563eb'), mk('Red', 35, '#e11d48'), mk('Green', 20, '#16a34a')] },
-  bundestag: { label: 'Bundestag 2021 (736)', rows: 12, size: 5, parties: () => [
-    mk('Linke', 39, '#be3075'), mk('SPD', 206, '#e3000f'), mk('Grüne', 118, '#46962b'), mk('SSW', 1, '#003c8f'),
-    mk('FDP', 92, '#ffcc00'), mk('CDU/CSU', 197, '#444444'), mk('AfD', 83, '#009ee0')] },
-  senate: { label: 'US Senate (100)', rows: 5, size: 11, parties: () => [mk('Democrats', 45, '#2563eb'), mk('Independents', 2, '#8b5cf6'), mk('Republicans', 53, '#dc2626')] },
+  republic: { label: 'American Republic (435)', rows: 9, size: 7, parties: () => equalSeats(435, REP) },
+  nubria: { label: 'Nubria (600)', rows: 11, size: 6, parties: () => equalSeats(600, NUB) },
   empty: { label: 'Empty', rows: 5, size: 10, parties: () => [] },
 };
 
 const VPRESETS = {
-  three: { label: 'Three parties (100 %)', parties: () => [mv('Blue', 45, '#2563eb'), mv('Red', 35, '#e11d48'), mv('Green', 20, '#16a34a')] },
-  bundestag: { label: 'Bundestag 2021 (second votes)', parties: () => [
-    mv('SPD', 25.7, '#e3000f'), mv('CDU/CSU', 24.1, '#444444'), mv('Grüne', 14.8, '#46962b'), mv('FDP', 11.5, '#ffcc00'),
-    mv('AfD', 10.3, '#009ee0'), mv('Linke', 4.9, '#be3075'), mv('Others', 8.7, '#9ca3af')] },
+  republic: { label: 'American Republic', parties: () => REP.map(([n, c]) => mv(n, 12.5, c)) },
+  nubria: { label: 'Nubria', parties: () => NUB.map(([n, c]) => mv(n, Math.round(1000 / 7) / 10, c)) },
   empty: { label: 'Empty', parties: () => [] },
 };
 
@@ -319,8 +320,8 @@ function VoteChart({ list, type, total, dec, showVals, threshold, hover, setHove
 /* ---------------- Votes ---------------- */
 function VotesApp({ onBack }) {
   const [dark, setDark] = useTheme();
-  const [preset, setPreset] = useState('bundestag');
-  const [parties, setParties] = useState(VPRESETS.bundestag.parties());
+  const [preset, setPreset] = useState('republic');
+  const [parties, setParties] = useState(VPRESETS.republic.parties());
   const [tab, setTab] = useState('parties');
   const [type, setType] = useState('bars');
   const [sort, setSort] = useState(true);
@@ -365,4 +366,9 @@ function VotesApp({ onBack }) {
                   <div className="row">
                     <input type="number" min="0" max="100" step="0.1" className="field" style={{ width: '6rem' }} value={p.pct}
                       onChange={e => update(p.id, { pct: Math.max(0, parseFloat(e.target.value) || 0) })} />
-                    <span className="muted">%</sp
+                    <span className="muted">%</span>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="btn ghost block" onClick={add}>+ Add party</button>
+            </
