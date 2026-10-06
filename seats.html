@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parliament – Seats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f6f3; --fg: #14161a; --muted: #6b7078; --panel: #ffffff; --line: #dcdcd6;
+    --btn-bg: #14161a; --btn-fg: #f6f6f3;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a; --fg: #f2f2ee; --muted: #9aa0a8; --panel: #1c1f25; --line: #2c3037;
+    --btn-bg: #f2f2ee; --btn-fg: #14161a;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--fg);
+    transition: background .25s, color .25s;
+    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .theme-switch {
+    position: fixed; top: calc(1rem + env(safe-area-inset-top, 0px)); right: 1rem; z-index: 40;
+    width: 52px; height: 28px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--panel); cursor: pointer; padding: 0; transition: background .25s, border-color .25s;
+  }
+  .theme-switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--fg); transition: transform .25s, background .25s;
+  }
+  :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
+  .theme-switch:focus-visible, .btn:focus-visible, .field:focus-visible, .tab:focus-visible, .back:focus-visible, .card:focus-visible {
+    outline: 2px solid var(--fg); outline-offset: 3px;
+  }
+
+  .top { max-width: 80rem; margin: 2.5rem auto 1.5rem; }
+  .top h1 { font-size: clamp(2.25rem, 7vw, 4rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .back { display: inline-block; margin-top: .75rem; color: var(--muted); font-size: .9rem; text-decoration: none; }
+  .back:hover { color: var(--fg); }
+  button.back { background: none; border: 0; font: inherit; font-size: .9rem; cursor: pointer; padding: 0; margin-right: 1rem; }
+
+  .start { max-width: 56rem; margin: 0 auto; display: grid; gap: 1rem; }
+  @media (min-width: 640px) { .start { grid-template-columns: 1fr 1fr; } }
+  .card {
+    font: inherit; text-align: left; color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 1.5rem; cursor: pointer; display: flex; flex-direction: column; gap: .6rem;
+    transition: transform .15s, border-color .25s, background .25s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--fg); }
+  .card h2 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; }
+  .card p { color: var(--muted); font-size: .95rem; line-height: 1.45; }
+  .card svg { width: 100%; height: 70px; margin-bottom: .5rem; }
+
+  .layout { max-width: 80rem; margin: 0 auto; display: grid; gap: 1rem; }
+  @media (min-width: 768px) { .layout { grid-template-columns: 22rem 1fr; align-items: start; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: .75rem;
+    transition: background .25s, border-color .25s;
+  }
+  aside.panel { display: flex; flex-direction: column; gap: .75rem; }
+  @media (min-width: 768px) { aside.panel { max-height: calc(100vh - 2rem); overflow-y: auto; position: sticky; top: 1rem; } }
+  main.panel { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+  .field {
+    width: 100%; padding: .6rem .8rem; font: inherit; font-size: .9rem; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .btn {
+    font: inherit; font-weight: 600; font-size: .9rem; padding: .7rem 1rem; border: none; border-radius: 10px;
+    background: var(--btn-bg); color: var(--btn-fg); cursor: pointer; transition: background .25s, color .25s, transform .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn.block { width: 100%; }
+  .btn.ghost { background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
+  .tabs { display: flex; gap: .5rem; }
+  .tab { flex: 1; }
+
+  .party { border: 1px solid var(--line); border-radius: 10px; padding: .6rem; display: flex; flex-direction: column; gap: .5rem; }
+  .row { display: flex; align-items: center; gap: .5rem; font-size: .875rem; }
+  .row .field { width: auto; }
+  .party input[type=color] { width: 2.2rem; height: 2.2rem; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: transparent; cursor: pointer; flex: none; }
+  .del { background: none; border: none; color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer; padding: 0 .25rem; }
+  .del:hover { color: var(--fg); }
+  .muted { color: var(--muted); }
+  .party-list { display: flex; flex-direction: column; gap: .5rem; }
+  .slider { display: block; font-size: .875rem; }
+  .slider .lbl { display: flex; justify-content: space-between; margin-bottom: .25rem; }
+  .slider input { width: 100%; accent-color: var(--fg); }
+  .controls { display: flex; flex-direction: column; gap: .9rem; padding: .25rem; }
+
+  .banner { border-radius: 10px; padding: .75rem 1rem; font-size: .9rem; font-weight: 600; border: 1px solid var(--line); background: var(--bg); display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+  .banner.ok { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); }
+  .banner .btn { padding: .4rem .7rem; font-size: .8rem; margin-left: auto; }
+  .chart { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 50vh; }
+  .chart svg { width: 100%; max-height: 70vh; }
+  .chart svg text { font-family: inherit; }
+  .t { fill: var(--fg); } .tm { fill: var(--muted); }
+  .grid { stroke: var(--line); stroke-width: 1; }
+  footer { border-top: 1px solid var(--line); padding-top: .9rem; font-size: .875rem; display: flex; flex-direction: column; gap: .6rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+  .legend span { display: flex; align-items: center; gap: .4rem; }
+  .dot { display: inline-block; width: .75rem; height: .75rem; border-radius: 50%; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
+
+let _id = 0;
+const uid = () => 'p' + (++_id);
+const mk = (name, seats, color) => ({ id: uid(), name, seats, color });
+const mv = (name, pct, color) => ({ id: uid(), name, pct, color });
+const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
+
+// Largest-remainder distribution of N proportional to weights
+function distribute(N, weights) {
+  const s = weights.reduce((a, b) => a + b, 0);
+  if (!s) return weights.map(() => 0);
+  const raw = weights.map(w => N * w / s);
+  const base = raw.map(Math.floor);
+  const left = N - base.reduce((a, b) => a + b, 0);
+  raw.map((v, i) => [v - base[i], i]).sort((a, b) => b[0] - a[0]).slice(0, left).forEach(([, i]) => base[i]++);
+  return base;
+}
+const ringRows = (N, radii) => distribute(N, radii);
+const sizeFor = (N, rows) => Math.max(2, Math.min(11, Math.round(Math.min(0.3 * Math.sqrt(216000 / Math.max(N, 1)), 250 / rows / 2.3))));
+const rowsFor = N => Math.max(1, Math.min(20, Math.round(Math.sqrt(N) / 2.2)));
+
+function useTheme() {
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem('providence-theme') === 'dark'; } catch (e) { return false; }
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    try { localStorage.setItem('providence-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }, [dark]);
+  return [dark, setDark];
+}
+
+function ThemeSwitch({ dark, setDark }) {
+  return <button className="theme-switch" type="button" role="switch" aria-checked={dark} aria-label="Dark mode" onClick={() => setDark(d => !d)}></button>;
+}
+
+function Slider({ label, v, set, min, max, step }) {
+  return (
+    <label className="slider">
+      <div className="lbl"><span>{label}</span><span className="muted">{v}</span></div>
+      <input type="range" min={min} max={max} step={step || 1} value={v} onChange={e => set(+e.target.value)} />
+    </label>
+  );
+}
+
+function Header({ title }) {
+  return (
+    <div className="top">
+      <h1>{title}</h1>
+      <a className="back" href="parliament.html" style={{ marginRight: '1rem' }}>&larr; Change mode</a>
+      <a className="back" href="index.html">Back to Providence</a>
+    </div>
+  );
+}
+
+
+const REP = [['Libertarians','#facc15'],['Progressives','#ec4899'],['Republicans','#dc2626'],['Democrats','#2563eb'],
+  ['UPP','#16a34a'],['AFP','#1e3a8a'],['Socialists','#7f1d1d'],['Greens','#86efac']];
+const NUB = [['Left','#ec4899'],['SDU','#dc2626'],['EMP','#f97316'],['DPP','#2563eb'],
+  ['FLP','#facc15'],['LO','#000000'],['OI!','#4ade80']];
+const equalSeats = (N, c) => { const s = distribute(N, c.map(() => 1)); return c.map(([n, col], i) => mk(n, s[i], col)); };
+
+const PRESETS = {
+  republic: { label: 'American Republic (435)', rows: 9, size: 7, parties: () => equalSeats(435, REP) },
+  nubria: { label: 'Nubria (600)', rows: 11, size: 6, parties: () => equalSeats(600, NUB) },
+  empty: { label: 'Empty', rows: 5, size: 10, parties: () => [] },
+};
+
+
+/* ---------------- Seats ---------------- */
+function SeatsApp() {
+  const [parties, setParties] = useState(PRESETS.republic.parties());
+  const [layout, setLayout] = useState('hemicycle');
+  const [rows, setRows] = useState(5);
+  const [size, setSize] = useState(11);
+  const [margin, setMargin] = useState(8);
+  const [inner, setInner] = useState(120);
+  const [outer, setOuter] = useState(400);
+  const [coalition, setCoalition] = useState([]);
+  const [hoverParty, setHoverParty] = useState(null);
+  const [hoverSeat, setHoverSeat] = useState(null);
+  const [tab, setTab] = useState('parties');
+  const [dark, setDark] = useTheme();
+  const [preset, setPreset] = useState('republic');
+  const [scaleTo, setScaleTo] = useState(100);
+
+  const total = parties.reduce((a, p) => a + p.seats, 0);
+  const majority = Math.floor(total / 2) + 1;
+  const coalSeats = parties.filter(p => coalition.includes(p.id)).reduce((a, p) => a + p.seats, 0);
+
+  const seats = useMemo(() => {
+    if (!total) return [];
+    const R = Math.max(1, rows);
+    const radii = Array.from({ length: R }, (_, i) => R === 1 ? (inner + outer) / 2 : inner + (outer - inner) * i / (R - 1));
+    let pts = [];
+    if (layout === 'hemicycle' || layout === 'circle') {
+      const hemi = layout === 'hemicycle';
+      const m = hemi ? margin * Math.PI / 180 : 0;
+      const span = hemi ? Math.PI - 2 * m : 2 * Math.PI;
+      const counts = ringRows(total, radii);
+      radii.forEach((r, i) => {
+        const n = counts[i];
+        for (let k = 0; k < n; k++) {
+          const f = hemi ? (n === 1 ? 0.5 : k / (n - 1)) : k / n;
+          const t = (hemi ? Math.PI - m : Math.PI) - f * span;
+          pts.push({ x: r * Math.cos(t), y: -r * Math.sin(t), key: Math.PI - t, r });
+        }
+      });
+      pts.sort((a, b) => a.key - b.key || a.r - b.r);
+    } else if (layout === 'classroom') {
+      const sp = size * 2.6;
+      distribute(total, radii.map((_, i) => i + 3)).forEach((n, i) => {
+        for (let k = 0; k < n; k++) pts.push({ x: Math.round((k - (n - 1) / 2) * sp * 10) / 10, y: i * sp * 1.4 });
+      });
+      pts.sort((a, b) => a.x - b.x || a.y - b.y);
+    } else {
+      const sp = size * 2.6;
+      const L = Math.ceil(total / 2);
+      [[L, -1], [total - L, 1]].forEach(([n, s]) => {
+        for (let j = 0; j < n; j++) {
+          const col = j % R, row = Math.floor(j / R);
+          pts.push({ x: s * (inner / 2 + 20 + col * sp), y: row * sp });
+        }
+      });
+      pts.sort((a, b) => a.x - b.x || a.y - b.y);
+    }
+    let idx = 0;
+    parties.forEach((p, pi) => { for (let c = 0; c < p.seats && idx < pts.length; c++) pts[idx++].p = pi; });
+    return pts;
+  }, [parties, layout, rows, size, margin, inner, outer, total]);
+
+  const viewBox = useMemo(() => {
+    if (!seats.length) return '0 0 100 100';
+    const pad = size * 2;
+    const xs = seats.map(s => s.x), ys = seats.map(s => s.y);
+    const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad;
+    return `${x0} ${y0} ${Math.max(...xs) + pad - x0} ${Math.max(...ys) + pad - y0}`;
+  }, [seats, size]);
+
+  const update = (id, patch) => setParties(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p));
+  const toggleCoal = id => setCoalition(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id]);
+  const remove = id => { setParties(ps => ps.filter(p => p.id !== id)); setCoalition(c => c.filter(x => x !== id)); };
+  const add = () => setParties(ps => [...ps, mk('Party ' + (ps.length + 1), 10, PALETTE[ps.length % PALETTE.length])]);
+  const loadPreset = key => {
+    const pr = PRESETS[key];
+    const ps = pr.parties();
+    setPreset(key); setParties(ps); setRows(pr.rows); setSize(pr.size); setCoalition([]);
+    setScaleTo(ps.reduce((a, p) => a + p.seats, 0));
+  };
+  const scale = () => {
+    const t = Math.max(0, Math.round(scaleTo) || 0);
+    if (!total || !parties.length) return;
+    const counts = distribute(t, parties.map(p => p.seats));
+    setParties(ps => ps.map((p, i) => ({ ...p, seats: counts[i] })));
+    const r = rowsFor(t);
+    setRows(r); setSize(sizeFor(t, r));
+  };
+
+  return (
+    <>
+      <ThemeSwitch dark={dark} setDark={setDark} />
+      <Header title="Seats" />
+
+      <div className="layout">
+        <aside className="panel">
+          <select value={preset} onChange={e => loadPreset(e.target.value)} className="field">
+            {Object.entries(PRESETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <div className="tabs">
+            {[['parties', 'Parties'], ['layout', 'Layout Controls']].map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setTab(k)} className={'btn tab' + (tab === k ? '' : ' ghost')}>{l}</button>
+            ))}
+          </div>
+
+          {tab === 'parties' ? (
+            <div className="party-list">
+              {parties.map(p => (
+                <div key={p.id} className="party" onMouseEnter={() => setHoverParty(p.id)} onMouseLeave={() => setHoverParty(null)}>
+                  <div className="row">
+                    <input type="color" value={p.color} onChange={e => update(p.id, { color: e.target.value })} />
+                    <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { name: e.target.value })} />
+                    <button className="del" type="button" onClick={() => remove(p.id)} title="Delete" aria-label="Delete party">&times;</button>
+                  </div>
+                  <div className="row">
+                    <input type="number" min="0" className="field" style={{ width: '6rem' }} value={p.seats}
+                      onChange={e => update(p.id, { seats: Math.max(0, parseInt(e.target.value) || 0) })} />
+                    <span className="muted">seats</span>
+                    <label className="row" style={{ marginLeft: 'auto', gap: '.35rem' }}>
+                      <input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={coalition.includes(p.id)} onChange={() => toggleCoal(p.id)} /> Coalition
+                    </label>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="btn ghost block" onClick={add}>+ Add party</button>
+              <div className="row" style={{ paddingTop: '.25rem' }}>
+                <span>Scale to</span>
+                <input type="number" min="1" className="field" style={{ width: '6rem' }} value={scaleTo} onChange={e => setScaleTo(+e.target.value)} />
+                <button type="button" className="btn" style={{ marginLeft: 'auto' }} onClick={scale}>Apply</button>
+              </div>
+            </div>
+          ) : (
+            <div className="controls">
+              <select value={layout} onChange={e => setLayout(e.target.value)} className="field">
+                <option value="hemicycle">Hemicycle</option>
+                <option value="circle">Full circle</option>
+                <option value="classroom">Classroom</option>
+                <option value="westminster">Westminster</option>
+              </select>
+              <Slider label="Rows" v={rows} set={setRows} min={1} max={20} />
+              <Slider label="Seat size" v={size} set={setSize} min={2} max={16} />
+              <Slider label="Margin angle" v={margin} set={setMargin} min={0} max={40} />
+              <Slider label="Inner radius" v={inner} set={setInner} min={20} max={250} />
+              <Slider label="Outer radius" v={outer} set={setOuter} min={150} max={500} />
+            </div>
+          )}
+        </aside>
+
+        <main className="panel">
+          {coalition.length > 0 && (
+            <div className={'banner' + (coalSeats >= majority ? ' ok' : '')}>
+              Coalition: {coalSeats} seats — {coalSeats >= majority ? 'Majority Secured' : `needs ${majority - coalSeats} more`}
+            </div>
+          )}
+          <div className="chart">
+            {seats.length ? (
+              <svg viewBox={viewBox}>
+                {seats.map((s, i) => {
+                  const p = parties[s.p];
+                  if (!p) return null;
+                  let op = 1;
+                  if (hoverParty && p.id !== hoverParty) op = 0.15;
+                  else if (coalition.length && !coalition.includes(p.id)) op = 0.25;
+                  return (
+                    <circle key={i} cx={s.x} cy={s.y} r={hoverSeat === i ? size * 1.35 : size} fill={p.color} opacity={op}
+                      onMouseEnter={() => setHoverSeat(i)} onMouseLeave={() => setHoverSeat(null)} style={{ transition: 'opacity .15s' }}>
+                      <title>{p.name} (seat {i + 1})</title>
+                    </circle>
+                  );
+                })}
+              </svg>
+            ) : <p className="muted">Add a party with seats to draw the chart.</p>}
+          </div>
+          <footer>
+            <div>Total seats: <b>{total}</b> · Majority threshold: <b>{majority}</b></div>
+            <div className="legend">
+              {parties.map(p => (
+                <span key={p.id}><i className="dot" style={{ background: p.color }}></i>{p.name} ({p.seats})</span>
+              ))}
+            </div>
+          </footer>
+        </main>
+      </div>
+    </>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(<SeatsApp />);
+</script>
+</body>
+</html>
