@@ -37,7 +37,7 @@
     border-radius: 50%; background: var(--fg); transition: transform .25s, background .25s;
   }
   :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
-  .theme-switch:focus-visible, .btn:focus-visible, .field:focus-visible, .tab:focus-visible, .back:focus-visible {
+  .theme-switch:focus-visible, .btn:focus-visible, .field:focus-visible, .tab:focus-visible, .back:focus-visible, .card:focus-visible {
     outline: 2px solid var(--fg); outline-offset: 3px;
   }
 
@@ -45,6 +45,19 @@
   .top h1 { font-size: clamp(2.25rem, 7vw, 4rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
   .back { display: inline-block; margin-top: .75rem; color: var(--muted); font-size: .9rem; text-decoration: none; }
   .back:hover { color: var(--fg); }
+  button.back { background: none; border: 0; font: inherit; font-size: .9rem; cursor: pointer; padding: 0; margin-right: 1rem; }
+
+  .start { max-width: 56rem; margin: 0 auto; display: grid; gap: 1rem; }
+  @media (min-width: 640px) { .start { grid-template-columns: 1fr 1fr; } }
+  .card {
+    font: inherit; text-align: left; color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 1.5rem; cursor: pointer; display: flex; flex-direction: column; gap: .6rem;
+    transition: transform .15s, border-color .25s, background .25s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--fg); }
+  .card h2 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; }
+  .card p { color: var(--muted); font-size: .95rem; line-height: 1.45; }
+  .card svg { width: 100%; height: 70px; margin-bottom: .5rem; }
 
   .layout { max-width: 80rem; margin: 0 auto; display: grid; gap: 1rem; }
   @media (min-width: 768px) { .layout { grid-template-columns: 22rem 1fr; align-items: start; } }
@@ -85,10 +98,14 @@
   .slider input { width: 100%; accent-color: var(--fg); }
   .controls { display: flex; flex-direction: column; gap: .9rem; padding: .25rem; }
 
-  .banner { border-radius: 10px; padding: .75rem 1rem; font-size: .9rem; font-weight: 600; border: 1px solid var(--line); background: var(--bg); }
+  .banner { border-radius: 10px; padding: .75rem 1rem; font-size: .9rem; font-weight: 600; border: 1px solid var(--line); background: var(--bg); display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
   .banner.ok { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); }
+  .banner .btn { padding: .4rem .7rem; font-size: .8rem; margin-left: auto; }
   .chart { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 50vh; }
   .chart svg { width: 100%; max-height: 70vh; }
+  .chart svg text { font-family: inherit; }
+  .t { fill: var(--fg); } .tm { fill: var(--muted); }
+  .grid { stroke: var(--line); stroke-width: 1; }
   footer { border-top: 1px solid var(--line); padding-top: .9rem; font-size: .875rem; display: flex; flex-direction: column; gap: .6rem; }
   .legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
   .legend span { display: flex; align-items: center; gap: .4rem; }
@@ -105,6 +122,7 @@ const { useState, useMemo, useEffect } = React;
 let _id = 0;
 const uid = () => 'p' + (++_id);
 const mk = (name, seats, color) => ({ id: uid(), name, seats, color });
+const mv = (name, pct, color) => ({ id: uid(), name, pct, color });
 const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
 
 const PRESETS = {
@@ -114,6 +132,14 @@ const PRESETS = {
     mk('FDP', 92, '#ffcc00'), mk('CDU/CSU', 197, '#444444'), mk('AfD', 83, '#009ee0')] },
   senate: { label: 'US Senate (100)', rows: 5, size: 11, parties: () => [mk('Democrats', 45, '#2563eb'), mk('Independents', 2, '#8b5cf6'), mk('Republicans', 53, '#dc2626')] },
   empty: { label: 'Empty', rows: 5, size: 10, parties: () => [] },
+};
+
+const VPRESETS = {
+  three: { label: 'Three parties (100 %)', parties: () => [mv('Blue', 45, '#2563eb'), mv('Red', 35, '#e11d48'), mv('Green', 20, '#16a34a')] },
+  bundestag: { label: 'Bundestag 2021 (second votes)', parties: () => [
+    mv('SPD', 25.7, '#e3000f'), mv('CDU/CSU', 24.1, '#444444'), mv('Grüne', 14.8, '#46962b'), mv('FDP', 11.5, '#ffcc00'),
+    mv('AfD', 10.3, '#009ee0'), mv('Linke', 4.9, '#be3075'), mv('Others', 8.7, '#9ca3af')] },
+  empty: { label: 'Empty', parties: () => [] },
 };
 
 // Largest-remainder distribution of N proportional to weights
@@ -130,20 +156,264 @@ const ringRows = (N, radii) => distribute(N, radii);
 const sizeFor = (N, rows) => Math.max(2, Math.min(11, Math.round(Math.min(0.3 * Math.sqrt(216000 / Math.max(N, 1)), 250 / rows / 2.3))));
 const rowsFor = N => Math.max(1, Math.min(20, Math.round(Math.sqrt(N) / 2.2)));
 
-function getSavedTheme() {
-  try { return localStorage.getItem('providence-theme') === 'dark'; } catch (e) { return false; }
+function useTheme() {
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem('providence-theme') === 'dark'; } catch (e) { return false; }
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    try { localStorage.setItem('providence-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }, [dark]);
+  return [dark, setDark];
 }
 
-function Slider({ label, v, set, min, max }) {
+function ThemeSwitch({ dark, setDark }) {
+  return <button className="theme-switch" type="button" role="switch" aria-checked={dark} aria-label="Dark mode" onClick={() => setDark(d => !d)}></button>;
+}
+
+function Slider({ label, v, set, min, max, step }) {
   return (
     <label className="slider">
       <div className="lbl"><span>{label}</span><span className="muted">{v}</span></div>
-      <input type="range" min={min} max={max} value={v} onChange={e => set(+e.target.value)} />
+      <input type="range" min={min} max={max} step={step || 1} value={v} onChange={e => set(+e.target.value)} />
     </label>
   );
 }
 
-function App() {
+function Header({ title, onBack }) {
+  return (
+    <div className="top">
+      <h1>{title}</h1>
+      <button className="back" type="button" onClick={onBack}>&larr; Change mode</button>
+      <a className="back" href="index.html">Back to Providence</a>
+    </div>
+  );
+}
+
+/* ---------------- Start screen ---------------- */
+function Start({ onPick }) {
+  const [dark, setDark] = useTheme();
+  return (
+    <>
+      <ThemeSwitch dark={dark} setDark={setDark} />
+      <div className="top"><h1>Parliament</h1><span className="back">Choose what you want to build</span></div>
+      <div className="start">
+        <button className="card" type="button" onClick={() => onPick('seats')}>
+          <svg viewBox="0 0 200 70" aria-hidden="true">
+            {[0, 1, 2].map(r => {
+              const n = 8 + r * 4;
+              return Array.from({ length: n }, (_, k) => {
+                const t = Math.PI - k / (n - 1) * Math.PI, R = 30 + r * 16;
+                return <circle key={r + '-' + k} cx={100 + R * Math.cos(t)} cy={64 - R * Math.sin(t)} r="4"
+                  fill={['#2563eb', '#e11d48', '#16a34a'][Math.floor(k / n * 3)]} />;
+              });
+            })}
+          </svg>
+          <h2>Seats</h2>
+          <p>Parliament seating charts: hemicycle, circle, classroom and Westminster layouts, with coalition test.</p>
+        </button>
+        <button className="card" type="button" onClick={() => onPick('votes')}>
+          <svg viewBox="0 0 200 70" aria-hidden="true">
+            {[[45,'#2563eb'],[35,'#e11d48'],[20,'#16a34a'],[10,'#f59e0b']].map(([w, c], i) =>
+              <rect key={i} x="10" y={4 + i * 16} width={w * 3.6} height="11" rx="3" fill={c} />)}
+          </svg>
+          <h2>Votes</h2>
+          <p>Election results as bar charts, columns, pie, donut or stacked bar &mdash; with custom parties and percentages.</p>
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ---------------- Votes helpers ---------------- */
+const ink = hex => {
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#14161a' : '#ffffff';
+};
+function arcPath(cx, cy, r0, r1, a0, a1) {
+  a1 = Math.min(a1, a0 + Math.PI * 2 - 0.0001);
+  const L = a1 - a0 > Math.PI ? 1 : 0, P = (r, a) => [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+  const [x0, y0] = P(r1, a0), [x1, y1] = P(r1, a1), [x2, y2] = P(r0, a1), [x3, y3] = P(r0, a0);
+  return r0 > 0
+    ? `M${x0} ${y0}A${r1} ${r1} 0 ${L} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${L} 0 ${x3} ${y3}Z`
+    : `M${cx} ${cy}L${x0} ${y0}A${r1} ${r1} 0 ${L} 1 ${x1} ${y1}Z`;
+}
+
+function VoteChart({ list, type, total, dec, showVals, threshold, hover, setHover }) {
+  const f = v => v.toFixed(dec) + '%';
+  const share = p => total ? p.pct / total * 100 : 0;
+  const op = p => hover && hover !== p.id ? 0.2 : 1;
+  const hv = p => ({ onMouseEnter: () => setHover(p.id), onMouseLeave: () => setHover(null), style: { transition: 'opacity .15s' }, opacity: op(p) });
+  const maxV = Math.max(1, ...list.map(p => p.pct), threshold || 0);
+  const nice = Math.ceil(maxV / 5) * 5, step = nice <= 10 ? 1 : nice <= 30 ? 5 : 10;
+  const ticks = []; for (let v = 0; v <= nice; v += step) ticks.push(v);
+
+  if (type === 'bars') {
+    const L = 150, W = 430, H = 30 + list.length * 38;
+    return (
+      <svg viewBox={`0 0 640 ${H}`}>
+        {ticks.map(v => <g key={v}><line className="grid" x1={L + v / nice * W} x2={L + v / nice * W} y1="10" y2={H - 20} /><text className="tm" x={L + v / nice * W} y={H - 4} fontSize="11" textAnchor="middle">{v}%</text></g>)}
+        {list.map((p, i) => (
+          <g key={p.id} {...hv(p)}>
+            <text className="t" x={L - 10} y={30 + i * 38 + 5} fontSize="14" fontWeight="600" textAnchor="end">{p.name}</text>
+            <rect x={L} y={16 + i * 38} width={Math.max(0, p.pct / nice * W)} height="26" rx="4" fill={p.color} />
+            {showVals && <text className="t" x={L + p.pct / nice * W + 8} y={30 + i * 38 + 5} fontSize="13" fontWeight="600">{f(p.pct)}</text>}
+          </g>
+        ))}
+        {threshold > 0 && <line x1={L + threshold / nice * W} x2={L + threshold / nice * W} y1="6" y2={H - 20} stroke="#e11d48" strokeWidth="2" strokeDasharray="6 4" />}
+      </svg>
+    );
+  }
+  if (type === 'columns') {
+    const L = 50, B = 330, T = 24, W = 570, Hh = B - T, n = Math.max(list.length, 1), slot = W / n, bw = Math.min(slot * 0.65, 90), rot = n > 7;
+    return (
+      <svg viewBox="0 0 640 420">
+        {ticks.map(v => { const y = B - v / nice * Hh; return <g key={v}><line className="grid" x1={L} x2={L + W} y1={y} y2={y} /><text className="tm" x={L - 8} y={y + 4} fontSize="11" textAnchor="end">{v}%</text></g>; })}
+        {list.map((p, i) => {
+          const cx = L + slot * (i + 0.5), h = p.pct / nice * Hh;
+          return (
+            <g key={p.id} {...hv(p)}>
+              <rect x={cx - bw / 2} y={B - h} width={bw} height={Math.max(0, h)} rx="4" fill={p.color} />
+              {showVals && <text className="t" x={cx} y={B - h - 7} fontSize="13" fontWeight="600" textAnchor="middle">{f(p.pct)}</text>}
+              <text className="t" fontSize="13" fontWeight="600" textAnchor={rot ? 'end' : 'middle'} transform={rot ? `translate(${cx + 4} ${B + 18}) rotate(-40)` : `translate(${cx} ${B + 20})`}>{p.name}</text>
+            </g>
+          );
+        })}
+        {threshold > 0 && <line x1={L} x2={L + W} y1={B - threshold / nice * Hh} y2={B - threshold / nice * Hh} stroke="#e11d48" strokeWidth="2" strokeDasharray="6 4" />}
+      </svg>
+    );
+  }
+  if (type === 'pie' || type === 'donut') {
+    let a = 0; const r0 = type === 'donut' ? 100 : 0;
+    return (
+      <svg viewBox="0 0 400 400" style={{ maxWidth: 520 }}>
+        {list.map(p => {
+          const a0 = a, a1 = a + share(p) / 100 * Math.PI * 2, mid = (a0 + a1) / 2, rr = (r0 + 180) / 2; a = a1;
+          return (
+            <g key={p.id} {...hv(p)}>
+              <path d={arcPath(200, 200, r0, 180, a0, a1)} fill={p.color} stroke="var(--panel)" strokeWidth="2" />
+              {showVals && share(p) >= 4 && <text x={200 + rr * Math.sin(mid)} y={200 - rr * Math.cos(mid) + 4} fontSize="13" fontWeight="700" textAnchor="middle" fill={ink(p.color)}>{f(share(p))}</text>}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }
+  // stacked
+  let x = 0;
+  return (
+    <svg viewBox="0 0 640 110">
+      {list.map(p => {
+        const w = share(p) / 100 * 620, x0 = x; x += w;
+        return (
+          <g key={p.id} {...hv(p)}>
+            <rect x={10 + x0} y="20" width={w} height="70" fill={p.color} stroke="var(--panel)" strokeWidth="2" />
+            {showVals && w > 38 && <text x={10 + x0 + w / 2} y="60" fontSize="13" fontWeight="700" textAnchor="middle" fill={ink(p.color)}>{f(share(p))}</text>}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ---------------- Votes ---------------- */
+function VotesApp({ onBack }) {
+  const [dark, setDark] = useTheme();
+  const [preset, setPreset] = useState('bundestag');
+  const [parties, setParties] = useState(VPRESETS.bundestag.parties());
+  const [tab, setTab] = useState('parties');
+  const [type, setType] = useState('bars');
+  const [sort, setSort] = useState(true);
+  const [showVals, setShowVals] = useState(true);
+  const [useTh, setUseTh] = useState(false);
+  const [th, setTh] = useState(5);
+  const [dec, setDec] = useState(1);
+  const [hover, setHover] = useState(null);
+
+  const total = Math.round(parties.reduce((a, p) => a + p.pct, 0) * 1000) / 1000;
+  const list = useMemo(() => sort ? [...parties].sort((a, b) => b.pct - a.pct) : parties, [parties, sort]);
+  const update = (id, patch) => setParties(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p));
+  const remove = id => setParties(ps => ps.filter(p => p.id !== id));
+  const add = () => setParties(ps => [...ps, mv('Party ' + (ps.length + 1), 5, PALETTE[ps.length % PALETTE.length])]);
+  const normalize = () => total && setParties(ps => ps.map(p => ({ ...p, pct: Math.round(p.pct / total * 1000) / 10 })));
+  const below = useTh ? list.filter(p => p.pct < th) : [];
+  const off = Math.abs(total - 100) > 0.05;
+
+  return (
+    <>
+      <ThemeSwitch dark={dark} setDark={setDark} />
+      <Header title="Votes" onBack={onBack} />
+      <div className="layout">
+        <aside className="panel">
+          <select value={preset} onChange={e => { setPreset(e.target.value); setParties(VPRESETS[e.target.value].parties()); }} className="field">
+            {Object.entries(VPRESETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <div className="tabs">
+            {[['parties', 'Parties'], ['display', 'Display']].map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setTab(k)} className={'btn tab' + (tab === k ? '' : ' ghost')}>{l}</button>
+            ))}
+          </div>
+          {tab === 'parties' ? (
+            <div className="party-list">
+              {parties.map(p => (
+                <div key={p.id} className="party" onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}>
+                  <div className="row">
+                    <input type="color" value={p.color} onChange={e => update(p.id, { color: e.target.value })} />
+                    <input className="field" style={{ flex: 1, minWidth: 0 }} value={p.name} onChange={e => update(p.id, { name: e.target.value })} />
+                    <button className="del" type="button" onClick={() => remove(p.id)} title="Delete" aria-label="Delete party">&times;</button>
+                  </div>
+                  <div className="row">
+                    <input type="number" min="0" max="100" step="0.1" className="field" style={{ width: '6rem' }} value={p.pct}
+                      onChange={e => update(p.id, { pct: Math.max(0, parseFloat(e.target.value) || 0) })} />
+                    <span className="muted">%</span>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="btn ghost block" onClick={add}>+ Add party</button>
+            </div>
+          ) : (
+            <div className="controls">
+              <select value={type} onChange={e => setType(e.target.value)} className="field">
+                <option value="bars">Horizontal bars</option>
+                <option value="columns">Columns</option>
+                <option value="pie">Pie</option>
+                <option value="donut">Donut</option>
+                <option value="stacked">Stacked bar</option>
+              </select>
+              <label className="row"><input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={sort} onChange={e => setSort(e.target.checked)} /> Sort by result</label>
+              <label className="row"><input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={showVals} onChange={e => setShowVals(e.target.checked)} /> Show values</label>
+              <Slider label="Decimals" v={dec} set={setDec} min={0} max={2} />
+              <label className="row"><input type="checkbox" style={{ accentColor: 'var(--fg)' }} checked={useTh} onChange={e => setUseTh(e.target.checked)} /> Threshold line (bar &amp; column charts)</label>
+              {useTh && <Slider label="Threshold (%)" v={th} set={setTh} min={0.5} max={10} step={0.5} />}
+            </div>
+          )}
+        </aside>
+
+        <main className="panel">
+          {parties.length > 0 && (
+            <div className={'banner' + (!off ? ' ok' : '')}>
+              Total: {total.toFixed(1)}% {off ? '— does not add up to 100%' : '✓'}
+              {off && <button type="button" className="btn" onClick={normalize}>Normalize to 100%</button>}
+            </div>
+          )}
+          <div className="chart">
+            {list.length && total ? <VoteChart list={list} type={type} total={total} dec={dec} showVals={showVals} threshold={useTh ? th : 0} hover={hover} setHover={setHover} />
+              : <p className="muted">Add a party with a percentage to draw the chart.</p>}
+          </div>
+          <footer>
+            <div className="legend">
+              {list.map(p => <span key={p.id}><i className="dot" style={{ background: p.color }}></i>{p.name} ({p.pct.toFixed(dec)}%)</span>)}
+            </div>
+            {below.length > 0 && <div className="muted">Below {th}%: {below.map(p => p.name).join(', ')}</div>}
+          </footer>
+        </main>
+      </div>
+    </>
+  );
+}
+
+/* ---------------- Seats ---------------- */
+function SeatsApp({ onBack }) {
   const [parties, setParties] = useState(PRESETS.three.parties());
   const [layout, setLayout] = useState('hemicycle');
   const [rows, setRows] = useState(5);
@@ -155,14 +425,9 @@ function App() {
   const [hoverParty, setHoverParty] = useState(null);
   const [hoverSeat, setHoverSeat] = useState(null);
   const [tab, setTab] = useState('parties');
-  const [dark, setDark] = useState(getSavedTheme);
+  const [dark, setDark] = useTheme();
   const [preset, setPreset] = useState('three');
   const [scaleTo, setScaleTo] = useState(100);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    try { localStorage.setItem('providence-theme', dark ? 'dark' : 'light'); } catch (e) {}
-  }, [dark]);
 
   const total = parties.reduce((a, p) => a + p.seats, 0);
   const majority = Math.floor(total / 2) + 1;
@@ -238,13 +503,8 @@ function App() {
 
   return (
     <>
-      <button className="theme-switch" type="button" role="switch" aria-checked={dark} aria-label="Dark mode"
-        onClick={() => setDark(d => !d)}></button>
-
-      <div className="top">
-        <h1>Parliament</h1>
-        <a className="back" href="index.html">&larr; Back to Providence</a>
-      </div>
+      <ThemeSwitch dark={dark} setDark={setDark} />
+      <Header title="Seats" onBack={onBack} />
 
       <div className="layout">
         <aside className="panel">
@@ -339,7 +599,14 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+function Root() {
+  const [mode, setMode] = useState(null);
+  if (mode === 'seats') return <SeatsApp onBack={() => setMode(null)} />;
+  if (mode === 'votes') return <VotesApp onBack={() => setMode(null)} />;
+  return <Start onPick={setMode} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
 </script>
 </body>
 </html>
