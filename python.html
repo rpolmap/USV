@@ -12,9 +12,19 @@
 <body>
 <pre id="out"></pre>
 <script>
-  fetch('/run')
-    .then(r => r.text())
-    .then(t => { document.getElementById('out').textContent = t; });
+  const out = document.getElementById('out');
+
+  // Try the live server first (python server.py), then fall back to a saved output.txt
+  async function load(url) {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    return r.text();
+  }
+
+  load('run')
+    .catch(() => load('output.txt'))
+    .then(t => { out.textContent = t; })
+    .catch(() => { out.textContent = 'No output available.'; });
 </script>
 </body>
 </html>
