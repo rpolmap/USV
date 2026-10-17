@@ -1,45 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Output</title>
+<title>web.py</title>
 <style>
-  body { margin: 0; padding: 16px; font-family: monospace; }
-  pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; display: inline; }
-  #in { font: inherit; border: none; outline: none; background: transparent;
-        color: inherit; width: 60%; padding: 0; }
+  :root{--bg:#fff;--fg:#111;--bd:#ddd;--err:#dc2626}
+  @media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--bd:#333;--err:#f87171}}
+  body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.5 ui-monospace,Menlo,Consolas,monospace}
+  #term{white-space:pre-wrap;word-break:break-word}
+  #term input{font:inherit;color:inherit;background:transparent;border:0;border-bottom:1px solid var(--bd);outline:0;width:14ch;max-width:60vw}
+  .err{color:var(--err)}
+  button{font:inherit;margin-top:14px;padding:6px 12px;color:inherit;background:var(--bg);border:1px solid var(--bd);border-radius:6px;cursor:pointer}
 </style>
 </head>
 <body>
-<pre id="out"></pre><input id="in" type="text" autocomplete="off" autofocus>
+<div id="term">Loading Python…</div>
+<button id="rerun" hidden>Run again</button>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>
-  const out = document.getElementById('out');
-  const inp = document.getElementById('in');
-  let timer;
+// The Python file to run (same folder as this page).
+const SCRIPT = "web.py";
 
-  async function poll() {
-    try {
-      const r = await fetch('output', { cache: 'no-store' });
-      if (!r.ok) throw new Error();
-      out.textContent = await r.text();
-      window.scrollTo(0, document.body.scrollHeight);
-    } catch (e) {
-      out.textContent = 'No output available.';
-      clearInterval(timer);
-    }
-  }
+const term = document.getElementById("term");
+const rerun = document.getElementById("rerun");
+let pyodide;
 
-  inp.addEventListener('keydown', async e => {
-    if (e.key !== 'Enter') return;
-    const v = inp.value;
-    inp.value = '';
-    await fetch('send', { method: 'POST', body: v });
-    poll();
+function write(text, cls) {
+  const s = document.createElement("span");
+  if (cls) s.className = cls;
+  s.textContent = text;
+  term.append(s);
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+// Replacement for Python's input(): shows the prompt, waits for a typed line.
+function ainput(prompt) {
+  write(prompt || "");
+  return new Promise(resolve => {
+    const box = document.createElement("input");
+    box.autocomplete = "off"; box.spellcheck = false;
+    term.append(box); box.focus();
+    box.onkeydown = e => {
+      if (e.key !== "Enter") return;
+      const v = box.value;
+      box.replaceWith(document.createTextNode(v + "\n"));
+      resolve(v);
+    };
   });
+}
 
-  fetch('start').then(() => { timer = setInterval(poll, 300); poll(); })
-                .catch(() => { out.textContent = 'No output available.'; });
+async function run() {
+  rerun.hidden = true;
+  term.textContent = "";
+  try {
+    if (!pyodide) {
+      write("Loading Python…\n");
+      pyodide = await loadPyodide();
+      pyodide.setStdout({ batched: s => write(s + "\n") });
+      pyodide.setStderr({ batched: s => write(s + "\n", "err") });
+      pyodide.globals.set("ainput", ainput);
+      term.textContent = "";
+    }
+    const code = (await (await fetch(SCRIPT + "?t=" + Date.now())).text())
+      .replace(/\binput\s*\(/g, "await ainput(");
+    await pyodide.runPythonAsync(code);
+  } catch (e) {
+    write(String(e.message || e) + "\n", "err");
+  }
+  rerun.hidden = false;
+}
+rerun.onclick = run;
+run();
 </script>
 </body>
 </html>
