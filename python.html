@@ -6,25 +6,40 @@
 <title>Output</title>
 <style>
   body { margin: 0; padding: 16px; font-family: monospace; }
-  pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+  pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; display: inline; }
+  #in { font: inherit; border: none; outline: none; background: transparent;
+        color: inherit; width: 60%; padding: 0; }
 </style>
 </head>
 <body>
-<pre id="out"></pre>
+<pre id="out"></pre><input id="in" type="text" autocomplete="off" autofocus>
 <script>
   const out = document.getElementById('out');
+  const inp = document.getElementById('in');
+  let timer;
 
-  // Try the live server first (python server.py), then fall back to a saved output.txt
-  async function load(url) {
-    const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) throw new Error(r.status);
-    return r.text();
+  async function poll() {
+    try {
+      const r = await fetch('output', { cache: 'no-store' });
+      if (!r.ok) throw new Error();
+      out.textContent = await r.text();
+      window.scrollTo(0, document.body.scrollHeight);
+    } catch (e) {
+      out.textContent = 'No output available.';
+      clearInterval(timer);
+    }
   }
 
-  load('run')
-    .catch(() => load('output.txt'))
-    .then(t => { out.textContent = t; })
-    .catch(() => { out.textContent = 'No output available.'; });
+  inp.addEventListener('keydown', async e => {
+    if (e.key !== 'Enter') return;
+    const v = inp.value;
+    inp.value = '';
+    await fetch('send', { method: 'POST', body: v });
+    poll();
+  });
+
+  fetch('start').then(() => { timer = setInterval(poll, 300); poll(); })
+                .catch(() => { out.textContent = 'No output available.'; });
 </script>
 </body>
 </html>
