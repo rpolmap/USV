@@ -4,7 +4,7 @@ import html
 from urllib.parse import quote
 
 # Which Fandom wiki to search: https://WIKI.fandom.com
-WIKI = "community"
+WIKI = "providence"
 
 
 def fandom_search(query):
