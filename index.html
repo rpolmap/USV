@@ -42,6 +42,20 @@
             padding: 0 1rem;
         }
 
+        /* Python link (top left, terminal-style text) */
+        .py-link {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color .25s;
+        }
+        .py-link:hover { color: var(--fg); }
+        .py-link:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
         /* Theme switch */
         .theme-switch {
             position: fixed;
@@ -179,6 +193,8 @@
     </style>
 </head>
 <body>
+
+    <a class="py-link" href="python.html">Python</a>
 
     <button class="theme-switch" id="themeSwitch" type="button"
             role="switch" aria-checked="false" aria-label="Dark mode"></button>
