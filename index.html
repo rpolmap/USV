@@ -42,11 +42,15 @@
             padding: 0 1rem;
         }
 
-        /* Python link (top left, terminal-style text) */
-        .py-link {
+        /* Top-left links (terminal-style text) */
+        .top-links {
             position: fixed;
             top: 1rem;
             left: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .py-link {
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.75rem;
             color: var(--muted);
@@ -194,7 +198,10 @@
 </head>
 <body>
 
-    <a class="py-link" href="python.html">Python</a>
+    <nav class="top-links">
+        <a class="py-link" href="python.html">Python</a>
+        <a class="py-link" href="providence.pdf">LaTeX</a>
+    </nav>
 
     <button class="theme-switch" id="themeSwitch" type="button"
             role="switch" aria-checked="false" aria-label="Dark mode"></button>
