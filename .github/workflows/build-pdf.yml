@@ -25,13 +25,13 @@ jobs:
       - name: Compile LaTeX Document
         uses: xu-cheng/latex-action@v3
         with:
-          root_file: main.tex
+          root_file: providence.tex
 
       - name: Commit and Push PDF
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add main.pdf
+          git add providence.pdf
           git commit -m "Auto-update Providence Wiki PDF" || exit 0
           git push
           
