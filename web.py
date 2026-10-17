@@ -1,4 +1,34 @@
-import subprocess
+import json
+import re
+import html
+from urllib.parse import quote
+
+# Which Fandom wiki to search: https://WIKI.fandom.com
+WIKI = "community"
+
+
+def fandom_search(query):
+    url = (
+        "https://" + WIKI + ".fandom.com/api.php?action=query&list=search"
+        "&format=json&origin=*&srlimit=10&srsearch=" + quote(query)
+    )
+    try:
+        # Works in the browser (Pyodide)
+        from pyodide.http import open_url
+        raw = open_url(url).read()
+    except ImportError:
+        # Works in normal Python
+        from urllib.request import urlopen
+        raw = urlopen(url).read().decode("utf-8")
+    hits = json.loads(raw)["query"]["search"]
+    lines = []
+    for h in hits:
+        snippet = html.unescape(re.sub(r"<[^>]+>", "", h["snippet"]))
+        link = "https://" + WIKI + ".fandom.com/wiki/" + quote(h["title"].replace(" ", "_"))
+        lines.append(h["title"] + "\n" + link + "\n" + snippet + "\n")
+    return "\n".join(lines) if lines else "No results."
+
+
 print("Welcome to the Providence Website!")
 print("Page 1: Fandom Search Engine")
 print("Page 2: Parliament Tool")
@@ -6,14 +36,8 @@ user_text = input("Select page [1/2]")
 if user_text == "1":
     search_query = input("Search: ")
     try:
-        result = subprocess.run(
-            ["node", "fandom.js", search_query],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        print(result.stdout)
-    except subprocess.CalledProcessError:
+        print(fandom_search(search_query))
+    except Exception:
         print("Error")
 elif user_text == "2":
 	try:
