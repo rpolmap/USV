@@ -120,20 +120,6 @@
         .dash-btn-sm:hover { transform: translateY(-1px); }
         .dash-btn-sm:active { transform: translateY(0); }
 
-        .icon-btn {
-            background: var(--bg);
-            border: 1px solid var(--line);
-            color: var(--fg);
-            border-radius: 8px;
-            padding: 0.5rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background .25s, border-color .25s;
-        }
-        .icon-btn:hover { border-color: var(--fg); }
-
         /* Theme Switcher */
         .theme-switch {
             position: relative;
@@ -223,7 +209,6 @@
             font-size: 1rem;
             padding: 0.25rem 0.5rem;
             font-weight: bold;
-            transition: transform 0.2s;
         }
 
         .sidebar-body {
@@ -290,50 +275,7 @@
             border-color: #e11d48;
         }
 
-        /* Modal styling */
-        #settingsModal {
-            position: fixed;
-            inset: 0;
-            background: var(--overlay);
-            backdrop-filter: blur(4px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            z-index: 50;
-        }
-        #settingsModal.open { display: flex; }
-        .modal-card {
-            width: 100%;
-            max-width: 28rem;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 20px 50px rgba(0,0,0,.25);
-        }
-        .modal-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .modal-head h2 { font-size: 1.25rem; font-weight: 700; }
-        .close-btn {
-            background: none;
-            border: none;
-            color: var(--muted);
-            font-size: 1.75rem;
-            line-height: 1;
-            cursor: pointer;
-        }
-        .close-btn:hover { color: var(--fg); }
-
         .hidden { display: none !important; }
-
-        @media (prefers-reduced-motion: reduce) {
-            * { transition: none !important; }
-        }
     </style>
 </head>
 <body>
@@ -345,7 +287,6 @@
         </div>
 
         <div class="nav-actions">
-            <!-- Back to Providence Button -->
             <a href="index.html" class="dash-btn-sm" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">← Back to Providence</a>
 
             <div id="statusBadge" class="status-badge">
@@ -355,10 +296,6 @@
 
             <button id="saveBtn" class="dash-btn-sm" type="button">Save Changes</button>
 
-            <button id="configBtn" class="icon-btn" type="button" aria-label="Cloud Settings">
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
-
             <button class="theme-switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="Dark mode"></button>
         </div>
     </header>
@@ -367,7 +304,6 @@
     <div class="app-container">
         <div id="map"></div>
 
-        <!-- Universal Bottom Drawer Subdivision Details Panel -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header" id="sidebarHeader">
                 <div style="display: flex; align-items: center; overflow: hidden;">
@@ -404,38 +340,11 @@
         </aside>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settingsModal" role="dialog" aria-modal="true">
-        <div class="modal-card">
-            <div class="modal-head">
-                <h2>Cloud Sync Setup</h2>
-                <button class="close-btn" type="button" id="closeModalBtn" aria-label="Close">&times;</button>
-            </div>
-
-            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:1rem; line-height:1.4;">
-                Optional: Configure a JSON storage API endpoint (e.g. JSONbin.io) to synchronize map edits globally across devices. Otherwise, local device storage is used automatically.
-            </p>
-
-            <div class="form-group">
-                <label class="form-label" for="cfgEndpoint">Storage Endpoint URL</label>
-                <input type="url" id="cfgEndpoint" class="form-input" placeholder="https://api.jsonbin.io/v3/b/YOUR_BIN_ID">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="cfgApiKey">API Secret Key (Optional)</label>
-                <input type="password" id="cfgApiKey" class="form-input" placeholder="API Key">
-            </div>
-
-            <button type="button" id="saveConfigBtn" class="dash-btn-sm" style="width:100%; margin-top:0.5rem;">Save Settings</button>
-        </div>
-    </div>
-
     <!-- Leaflet & Geoman Libraries -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
 
     <script>
-        // --- Theme Toggle Logic ---
         const root = document.documentElement;
         const switchBtn = document.getElementById('themeSwitch');
         
@@ -454,7 +363,6 @@
             setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
 
-        // --- Bottom Drawer Toggle Logic (Unified Across All Devices) ---
         const sidebar = document.getElementById('sidebar');
         const sidebarHeader = document.getElementById('sidebarHeader');
         const toggleArrow = document.getElementById('toggleArrow');
@@ -465,11 +373,9 @@
         }
 
         sidebarHeader.addEventListener('click', () => {
-            const isOpen = sidebar.classList.contains('expanded');
-            setDrawerOpen(!isOpen);
+            setDrawerOpen(!sidebar.classList.contains('expanded'));
         });
 
-        // --- Country Color Palette Mapping ---
         const COUNTRY_COLORS = {};
         const COLOR_PALETTE = [
             '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -484,26 +390,18 @@
                 for (let i = 0; i < name.length; i++) {
                     hash = name.charCodeAt(i) + ((hash << 5) - hash);
                 }
-                const index = Math.abs(hash) % COLOR_PALETTE.length;
-                COUNTRY_COLORS[name] = COLOR_PALETTE[index];
+                COUNTRY_COLORS[name] = COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
             }
             return COUNTRY_COLORS[name];
         }
 
         const GLOBAL_SUBDIVISIONS_CDN = 'https://raw.githubusercontent.com/datasets/geo-ne-admin1/master/data/admin1.geojson';
 
-        const CONFIG = {
-            ENDPOINT: localStorage.getItem('providence_map_endpoint') || '',
-            API_KEY: localStorage.getItem('providence_map_key') || ''
-        };
+        // Pre-configured shared cloud storage bin URL
+        const CLOUD_ENDPOINT = 'https://api.npoint.io/3fec52567fc294073ef3';
 
         const map = L.map('map').setView([20.0, 0.0], 3);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
-
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         L.control.scale({ position: 'bottomleft' }).addTo(map);
 
         map.pm.addControls({
@@ -530,75 +428,47 @@
 
         function updateSyncStatus(text, type = 'success') {
             statusText.textContent = text;
-            if (type === 'success') {
-                statusDot.style.background = '#10b981';
-            } else if (type === 'syncing') {
-                statusDot.style.background = '#f59e0b';
-            } else {
-                statusDot.style.background = '#ef4444';
-            }
+            statusDot.style.background = type === 'success' ? '#10b981' : (type === 'syncing' ? '#f59e0b' : '#ef4444');
         }
 
         async function loadMapData() {
-            updateSyncStatus("Loading World Map...", "syncing");
+            updateSyncStatus("Loading Map...", "syncing");
             try {
                 let data = null;
-                const local = localStorage.getItem('providence_map_all_subdivisions_v1');
-                if (CONFIG.ENDPOINT) {
-                    try {
-                        const headers = {};
-                        if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
-                        const res = await fetch(CONFIG.ENDPOINT, { headers });
-                        if (res.ok) {
-                            const json = await res.json();
-                            data = json.record || json;
-                        }
-                    } catch (e) { console.warn("Cloud endpoint fetch failed, falling back to local"); }
-                }
-                
-                if (!data) {
-                    if (local) {
-                        data = JSON.parse(local);
-                    } else {
-                        const cdnRes = await fetch(GLOBAL_SUBDIVISIONS_CDN);
-                        if (!cdnRes.ok) throw new Error("CDN load failed");
-                        data = await cdnRes.json();
+                const res = await fetch(CLOUD_ENDPOINT);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json && json.features && json.features.length > 0) {
+                        data = json;
                     }
                 }
+                if (!data) {
+                    const cdnRes = await fetch(GLOBAL_SUBDIVISIONS_CDN);
+                    data = await cdnRes.json();
+                }
                 renderFeatures(data);
-                updateSyncStatus(CONFIG.ENDPOINT ? "Synced (Cloud)" : "Loaded (Local)");
+                updateSyncStatus("Synced (Cloud)");
             } catch (err) {
                 console.error(err);
-                updateSyncStatus("Loaded with fallback", "success");
+                updateSyncStatus("Load Error", "error");
             }
         }
 
         function renderFeatures(data) {
             if (geoJsonLayer) map.removeLayer(geoJsonLayer);
-
             geoJsonLayer = L.geoJSON(data, {
                 style: (feature) => {
-                    const country = (feature.properties && (feature.properties.country || feature.properties.admin)) ? (feature.properties.country || feature.properties.admin) : 'Unknown';
+                    const country = (feature.properties && (feature.properties.country || feature.properties.admin)) || 'Unknown';
                     const col = getCountryColor(country);
-                    return {
-                        color: col,
-                        fillColor: col,
-                        fillOpacity: 0.45,
-                        weight: 1
-                    };
+                    return { color: col, fillColor: col, fillOpacity: 0.45, weight: 1 };
                 },
                 onEachFeature: (feature, layer) => {
                     if (!feature.properties) feature.properties = {};
-                    
-                    const subName = feature.properties.name || feature.properties.name_en || 'Unnamed Subdivision';
-                    const countryName = feature.properties.country || feature.properties.admin || 'Unknown Country';
-                    
+                    const subName = feature.properties.name || feature.properties.name_en || 'Unnamed';
+                    const countryName = feature.properties.country || feature.properties.admin || 'Unknown';
                     feature.properties.name = subName;
                     feature.properties.country = countryName;
-                    
-                    if (!feature.properties.id) {
-                        feature.properties.id = 'sub-' + Math.random().toString(36).substr(2, 9);
-                    }
+                    if (!feature.properties.id) feature.properties.id = 'sub-' + Math.random().toString(36).substr(2, 9);
 
                     layer.bindPopup(`<strong>${subName}</strong><br>Country: ${countryName}`);
                     layer.on('click', () => selectSubdivision(layer));
@@ -609,47 +479,28 @@
         function selectSubdivision(layer) {
             selectedLayer = layer;
             const props = layer.feature.properties;
-
             document.getElementById('shapeId').value = props.id || '';
             document.getElementById('subName').value = props.name || '';
             document.getElementById('subCountry').value = props.country || '';
-
             emptyState.classList.add('hidden');
             propertyForm.classList.remove('hidden');
             selectionStatus.textContent = `(${props.name || 'Selected'})`;
-
-            // Automatically slide open the bottom drawer to reveal subdivision details
             setDrawerOpen(true);
-        }
-
-        function deselectSubdivision() {
-            selectedLayer = null;
-            emptyState.classList.remove('hidden');
-            propertyForm.classList.add('hidden');
-            selectionStatus.textContent = 'None selected';
         }
 
         propertyForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!selectedLayer) return;
-
-            const name = document.getElementById('subName').value;
-            const country = document.getElementById('subCountry').value;
-
-            selectedLayer.feature.properties.name = name;
-            selectedLayer.feature.properties.country = country;
-
+            selectedLayer.feature.properties.name = document.getElementById('subName').value;
+            selectedLayer.feature.properties.country = document.getElementById('subCountry').value;
+            
             map.eachLayer((layer) => {
                 if (layer instanceof L.Polygon && layer.feature && layer.feature.properties) {
-                    const cName = layer.feature.properties.country || 'Unknown';
-                    const col = getCountryColor(cName);
-                    layer.setStyle({ color: col, fillColor: col, fillOpacity: 0.45 });
+                    const col = getCountryColor(layer.feature.properties.country);
+                    layer.setStyle({ color: col, fillColor: col });
                 }
             });
-
-            selectedLayer.bindPopup(`<strong>${name}</strong><br>Country: ${country}`);
             updateSyncStatus("Unsaved changes", "syncing");
-            deselectSubdivision();
             setDrawerOpen(false);
         });
 
@@ -660,6 +511,13 @@
             updateSyncStatus("Unsaved changes", "syncing");
             setDrawerOpen(false);
         });
+
+        function deselectSubdivision() {
+            selectedLayer = null;
+            emptyState.classList.remove('hidden');
+            propertyForm.classList.add('hidden');
+            selectionStatus.textContent = 'None selected';
+        }
 
         map.on('pm:create', (e) => {
             const layer = e.layer;
@@ -679,7 +537,6 @@
             updateSyncStatus("Unsaved changes", "syncing");
         });
 
-        // --- Automatic Robust Save ---
         document.getElementById('saveBtn').addEventListener('click', async () => {
             updateSyncStatus("Saving...", "syncing");
             const features = [];
@@ -690,46 +547,18 @@
                 }
             });
 
-            const collection = { type: "FeatureCollection", features: features };
-
             try {
-                if (CONFIG.ENDPOINT) {
-                    const headers = { 'Content-Type': 'application/json' };
-                    if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
-                    const res = await fetch(CONFIG.ENDPOINT, { method: 'PUT', headers, body: JSON.stringify(collection) });
-                    if (!res.ok) throw new Error("Cloud save failed");
-                    updateSyncStatus("Saved successfully");
-                } else {
-                    localStorage.setItem('providence_map_all_subdivisions_v1', JSON.stringify(collection));
-                    updateSyncStatus("Saved successfully");
-                }
+                const res = await fetch(CLOUD_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: "FeatureCollection", features })
+                });
+                if (!res.ok) throw new Error("Save failed");
+                updateSyncStatus("Saved successfully");
             } catch (err) {
-                console.warn("Cloud save error, fallback to local storage:", err);
-                try {
-                    localStorage.setItem('providence_map_all_subdivisions_v1', JSON.stringify(collection));
-                    updateSyncStatus("Saved (Local fallback)");
-                } catch (localErr) {
-                    console.error(localErr);
-                    updateSyncStatus("Save failed", "error");
-                }
+                console.error(err);
+                updateSyncStatus("Save failed", "error");
             }
-        });
-
-        // Modal Handlers
-        const modal = document.getElementById('settingsModal');
-        document.getElementById('configBtn').addEventListener('click', () => {
-            document.getElementById('cfgEndpoint').value = CONFIG.ENDPOINT;
-            document.getElementById('cfgApiKey').value = CONFIG.API_KEY;
-            modal.classList.add('open');
-        });
-        document.getElementById('closeModalBtn').addEventListener('click', () => modal.classList.remove('open'));
-        document.getElementById('saveConfigBtn').addEventListener('click', () => {
-            CONFIG.ENDPOINT = document.getElementById('cfgEndpoint').value.trim();
-            CONFIG.API_KEY = document.getElementById('cfgApiKey').value.trim();
-            localStorage.setItem('providence_map_endpoint', CONFIG.ENDPOINT);
-            localStorage.setItem('providence_map_key', CONFIG.API_KEY);
-            modal.classList.remove('open');
-            loadMapData();
         });
 
         loadMapData();
