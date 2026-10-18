@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Providence - Map Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet-Geoman CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+
+    <style>
+        :root {
+            --bg: #f6f6f3;
+            --fg: #14161a;
+            --muted: #6b7078;
+            --panel: #ffffff;
+            --line: #dcdcd6;
+            --btn-bg: #14161a;
+            --btn-fg: #f6f6f3;
+            --overlay: rgba(20, 22, 26, 0.45);
+        }
+        :root[data-theme="dark"] {
+            --bg: #14161a;
+            --fg: #f2f2ee;
+            --muted: #9aa0a8;
+            --panel: #1c1f25;
+            --line: #2c3037;
+            --btn-bg: #f2f2ee;
+            --btn-fg: #14161a;
+            --overlay: rgba(0, 0, 0, 0.65);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            transition: background .25s, color .25s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Navigation */
+        header.nav-header {
+            height: 4rem;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel);
+            border-bottom: 1px solid var(--line);
+            z-index: 20;
+            shrink: 0;
+            transition: background .25s, border-color .25s;
+        }
+
+        .brand-area {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            text-decoration: none;
+            color: var(--fg);
+        }
+
+        .top-links {
+            display: flex;
+            gap: 1rem;
+        }
+        .py-link {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color .25s;
+        }
+        .py-link:hover { color: var(--fg); }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--bg);
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        /* Buttons */
+        .dash-btn-sm {
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--btn-bg);
+            color: var(--btn-fg);
+            cursor: pointer;
+            transition: background .25s, color .25s, transform .15s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dash-btn-sm:hover { transform: translateY(-1px); }
+        .dash-btn-sm:active { transform: translateY(0); }
+
+        .icon-btn {
+            background: var(--bg);
+            border: 1px solid var(--line);
+            color: var(--fg);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .25s, border-color .25s;
+        }
+        .icon-btn:hover { border-color: var(--fg); }
+
+        /* Theme Switcher */
+        .theme-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            cursor: pointer;
+            padding: 0;
+            transition: background .25s, border-color .25s;
+        }
+        .theme-switch::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--fg);
+            transition: transform .25s, background .25s;
+        }
+        :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
+
+        /* Main Workspace Container */
+        .app-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            flex: 1;
+            height: 100%;
+            z-index: 10;
+            background: var(--bg);
+        }
+
+        /* Dark mode tile inversion for map tiles */
+        :root[data-theme="dark"] .leaflet-tile-pane {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+        }
+
+        /* Sidebar Editor */
+        aside.sidebar {
+            width: 22rem;
+            background: var(--panel);
+            border-left: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            z-index: 15;
+            transition: background .25s, border-color .25s;
+        }
+
+        .sidebar-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-header h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+        .sidebar-status {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .sidebar-body {
+            padding: 1.25rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            font: inherit;
+            font-size: 0.875rem;
+            color: var(--fg);
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            outline: none;
+            transition: border-color .25s;
+        }
+        .form-input:focus {
+            border-color: var(--fg);
+        }
+        .color-picker-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .color-picker-input {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .btn-danger {
+            background: transparent;
+            border: 1px solid var(--line);
+            color: #e11d48;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: border-color .25s, background .25s;
+        }
+        .btn-danger:hover {
+            background: rgba(225, 29, 72, 0.08);
+            border-color: #e11d48;
+        }
+
+        /* Modal styling matching index.html */
+        #settingsModal {
+            position: fixed;
+            inset: 0;
+            background: var(--overlay);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            z-index: 50;
+        }
+        #settingsModal.open { display: flex; }
+        .modal-card {
+            width: 100%;
+            max-width: 28rem;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,.25);
+        }
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .modal-head h2 { font-size: 1.25rem; font-weight: 700; }
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1.75rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .close-btn:hover { color: var(--fg); }
+
+        .hidden { display: none !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="nav-header">
+        <div class="brand-area">
+            <a href="index.html" class="brand-title">Providence</a>
+            <nav class="top-links">
+                <a class="py-link" href="python.html">Python</a>
+                <a class="py-link" href="providence.pdf">LaTeX</a>
+                <a class="py-link" href="parliament.html">Parliament</a>
+            </nav>
+        </div>
+
+        <div class="nav-actions">
+            <!-- Sync Status Indicator -->
+            <div id="statusBadge" class="status-badge">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Synced</span>
+            </div>
+
+            <!-- Cloud Save Button -->
+            <button id="saveBtn" class="dash-btn-sm" type="button">Save Changes</button>
+
+            <!-- Config Button -->
+            <button id="configBtn" class="icon-btn" type="button" aria-label="Cloud Settings">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+
+            <!-- Theme Switch Button -->
+            <button class="theme-switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="Dark mode"></button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="app-container">
+        <!-- Interactive Map Container -->
+        <div id="map"></div>
+
+        <!-- Sidebar Editor -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Subdivision Details</h2>
+                <span class="sidebar-status" id="selectionStatus">None selected</span>
+            </div>
+
+            <div class="sidebar-body">
+                <div id="emptyState" class="empty-state">
+                    Click an existing region or use the drawing tools on the map to edit subdivisions.
+                </div>
+
+                <form id="propertyForm" class="hidden">
+                    <input type="hidden" id="shapeId">
+
+                    <div class="form-group">
+                        <label class="form-label" for="subName">Subdivision Name</label>
+                        <input type="text" id="subName" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="subCountry">Country / Region</label>
+                        <input type="text" id="subCountry" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Polygon Color</label>
+                        <div class="color-picker-row">
+                            <input type="color" id="subColor" class="color-picker-input">
+                            <span id="colorHex" class="py-link">#3b82f6</span>
+                        </div>
+                    </div>
+
+                    <div class="btn-row">
+                        <button type="submit" class="dash-btn-sm" style="flex:1;">Apply Changes</button>
+                        <button type="button" id="deleteBtn" class="btn-danger">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2>Cloud Sync Setup</h2>
+                <button class="close-btn" type="button" id="closeModalBtn" aria-label="Close">&times;</button>
+            </div>
+
+            <p style="font-size:0.8rem; color:var(--muted); margin-bottom:1rem; line-height:1.4;">
+                Configure a JSON storage API endpoint (e.g. JSONbin.io) to synchronize map edits globally across devices.
+            </p>
+
+            <div class="form-group">
+                <label class="form-label" for="cfgEndpoint">Storage Endpoint URL</label>
+                <input type="url" id="cfgEndpoint" class="form-input" placeholder="https://api.jsonbin.io/v3/b/YOUR_BIN_ID">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="cfgApiKey">API Secret Key (Optional)</label>
+                <input type="password" id="cfgApiKey" class="form-input" placeholder="API Key">
+            </div>
+
+            <button type="button" id="saveConfigBtn" class="dash-btn-sm" style="width:100%; margin-top:0.5rem;">Save Settings</button>
+        </div>
+    </div>
+
+    <!-- Leaflet & Geoman Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+
+    <script>
+        // --- Theme Toggle Logic ---
+        const root = document.documentElement;
+        const switchBtn = document.getElementById('themeSwitch');
+        
+        function setTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            switchBtn.setAttribute('aria-checked', theme === 'dark');
+            try { localStorage.setItem('providence-theme', theme); } catch (e) {}
+        }
+        
+        try {
+            const saved = localStorage.getItem('providence-theme');
+            if (saved) setTheme(saved);
+        } catch (e) {}
+        
+        switchBtn.addEventListener('click', () => {
+            setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+
+        // --- Cloud Configuration ---
+        const CONFIG = {
+            ENDPOINT: localStorage.getItem('providence_map_endpoint') || '',
+            API_KEY: localStorage.getItem('providence_map_key') || ''
+        };
+
+        const DEFAULT_GEOJSON = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": { "id": "sub-1", "name": "Providence Central", "country": "Providence", "color": "#14161a" },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[-0.135, 51.500], [-0.115, 51.500], [-0.115, 51.515], [-0.135, 51.515], [-0.135, 51.500]]]
+                    }
+                }
+            ]
+        };
+
+        // --- Map Initialization ---
+        const map = L.map('map').setView([51.51, -0.12], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        L.control.scale({ position: 'bottomleft' }).addTo(map);
+
+        // Configure Geoman Drawing Controls
+        map.pm.addControls({
+            position: 'topleft',
+            drawPolygon: true,
+            drawRectangle: true,
+            editMode: true,
+            dragMode: true,
+            removalMode: true,
+            drawMarker: false,
+            drawCircleMarker: false,
+            drawPolyLine: false,
+            drawCircle: false
+        });
+
+        let geoJsonLayer = null;
+        let selectedLayer = null;
+
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const emptyState = document.getElementById('emptyState');
+        const propertyForm = document.getElementById('propertyForm');
+        const selectionStatus = document.getElementById('selectionStatus');
+
+        function updateSyncStatus(text, type = 'success') {
+            statusText.textContent = text;
+            if (type === 'success') {
+                statusDot.style.background = '#10b981';
+            } else if (type === 'syncing') {
+                statusDot.style.background = '#f59e0b';
+            } else {
+                statusDot.style.background = '#ef4444';
+            }
+        }
+
+        // --- Data Persistence ---
+        async function loadMapData() {
+            updateSyncStatus("Syncing...", "syncing");
+            try {
+                let data = null;
+                if (CONFIG.ENDPOINT) {
+                    const headers = {};
+                    if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
+                    const res = await fetch(CONFIG.ENDPOINT, { headers });
+                    if (!res.ok) throw new Error("Fetch failed");
+                    const json = await res.json();
+                    data = json.record || json;
+                } else {
+                    const local = localStorage.getItem('providence_map_data');
+                    data = local ? JSON.parse(local) : DEFAULT_GEOJSON;
+                }
+                renderFeatures(data);
+                updateSyncStatus(CONFIG.ENDPOINT ? "Synced (Cloud)" : "Loaded (Local)");
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus("Sync Error", "error");
+                const local = localStorage.getItem('providence_map_data');
+                renderFeatures(local ? JSON.parse(local) : DEFAULT_GEOJSON);
+            }
+        }
+
+        function renderFeatures(data) {
+            if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+
+            geoJsonLayer = L.geoJSON(data, {
+                style: (feature) => ({
+                    color: feature.properties.color || '#14161a',
+                    fillColor: feature.properties.color || '#14161a',
+                    fillOpacity: 0.35,
+                    weight: 2
+                }),
+                onEachFeature: (feature, layer) => {
+                    if (!feature.properties.id) {
+                        feature.properties.id = 'sub-' + Math.random().toString(36).substr(2, 9);
+                    }
+                    layer.bindPopup(`<strong>${feature.properties.name}</strong><br>${feature.properties.country}`);
+                    layer.on('click', () => selectSubdivision(layer));
+                }
+            }).addTo(map);
+        }
+
+        function selectSubdivision(layer) {
+            selectedLayer = layer;
+            const props = layer.feature.properties;
+
+            document.getElementById('shapeId').value = props.id || '';
+            document.getElementById('subName').value = props.name || '';
+            document.getElementById('subCountry').value = props.country || '';
+            document.getElementById('subColor').value = props.color || '#14161a';
+            document.getElementById('colorHex').textContent = props.color || '#14161a';
+
+            emptyState.classList.add('hidden');
+            propertyForm.classList.remove('hidden');
+            selectionStatus.textContent = props.name || 'Selected';
+        }
+
+        function deselectSubdivision() {
+            selectedLayer = null;
+            emptyState.classList.remove('hidden');
+            propertyForm.classList.add('hidden');
+            selectionStatus.textContent = 'None selected';
+        }
+
+        document.getElementById('subColor').addEventListener('input', (e) => {
+            document.getElementById('colorHex').textContent = e.target.value;
+        });
+
+        propertyForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!selectedLayer) return;
+
+            const name = document.getElementById('subName').value;
+            const country = document.getElementById('subCountry').value;
+            const color = document.getElementById('subColor').value;
+
+            selectedLayer.feature.properties.name = name;
+            selectedLayer.feature.properties.country = country;
+            selectedLayer.feature.properties.color = color;
+
+            selectedLayer.setStyle({ color: color, fillColor: color });
+            selectedLayer.bindPopup(`<strong>${name}</strong><br>${country}`);
+            updateSyncStatus("Unsaved changes", "syncing");
+            deselectSubdivision();
+        });
+
+        document.getElementById('deleteBtn').addEventListener('click', () => {
+            if (!selectedLayer) return;
+            map.removeLayer(selectedLayer);
+            deselectSubdivision();
+            updateSyncStatus("Unsaved changes", "syncing");
+        });
+
+        map.on('pm:create', (e) => {
+            const layer = e.layer;
+            const id = 'sub-' + Math.random().toString(36).substr(2, 9);
+            layer.feature = {
+                type: "Feature",
+                properties: { id: id, name: "New Region", country: "Providence", color: "#14161a" },
+                geometry: layer.toGeoJSON().geometry
+            };
+            layer.setStyle({ color: "#14161a", fillColor: "#14161a", fillOpacity: 0.35 });
+            layer.on('click', () => selectSubdivision(layer));
+            selectSubdivision(layer);
+            updateSyncStatus("Unsaved changes", "syncing");
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            updateSyncStatus("Saving...", "syncing");
+            const features = [];
+            map.eachLayer((layer) => {
+                if (layer instanceof L.Polygon && layer.feature) {
+                    layer.feature.geometry = layer.toGeoJSON().geometry;
+                    features.push(layer.feature);
+                }
+            });
+
+            const collection = { type: "FeatureCollection", features: features };
+
+            try {
+                if (CONFIG.ENDPOINT) {
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
+                    const res = await fetch(CONFIG.ENDPOINT, { method: 'PUT', headers, body: JSON.stringify(collection) });
+                    if (!res.ok) throw new Error("Save failed");
+                } else {
+                    localStorage.setItem('providence_map_data', JSON.stringify(collection));
+                }
+                updateSyncStatus("Saved successfully");
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus("Save failed", "error");
+            }
+        });
+
+        // Modal Handlers
+        const modal = document.getElementById('settingsModal');
+        document.getElementById('configBtn').addEventListener('click', () => {
+            document.getElementById('cfgEndpoint').value = CONFIG.ENDPOINT;
+            document.getElementById('cfgApiKey').value = CONFIG.API_KEY;
+            modal.classList.add('open');
+        });
+        document.getElementById('closeModalBtn').addEventListener('click', () => modal.classList.remove('open'));
+        document.getElementById('saveConfigBtn').addEventListener('click', () => {
+            CONFIG.ENDPOINT = document.getElementById('cfgEndpoint').value.trim();
+            CONFIG.API_KEY = document.getElementById('cfgApiKey').value.trim();
+            localStorage.setItem('providence_map_endpoint', CONFIG.ENDPOINT);
+            localStorage.setItem('providence_map_key', CONFIG.API_KEY);
+            modal.classList.remove('open');
+            loadMapData();
+        });
+
+        // Boot Application
+        loadMapData();
+    </script>
+</body>
+</html>
