@@ -55,7 +55,7 @@
             justify-content: space-between;
             background: var(--panel);
             border-bottom: 1px solid var(--line);
-            z-index: 20;
+            z-index: 30;
             flex-shrink: 0;
             transition: background .25s, border-color .25s;
         }
@@ -73,19 +73,6 @@
             text-decoration: none;
             color: var(--fg);
         }
-
-        .top-links {
-            display: flex;
-            gap: 1rem;
-        }
-        .py-link {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 0.75rem;
-            color: var(--muted);
-            text-decoration: none;
-            transition: color .25s;
-        }
-        .py-link:hover { color: var(--fg); }
 
         .nav-actions {
             display: flex;
@@ -195,8 +182,8 @@
             border-left: 1px solid var(--line);
             display: flex;
             flex-direction: column;
-            z-index: 15;
-            transition: background .25s, border-color .25s;
+            z-index: 20;
+            transition: transform 0.3s ease, background .25s, border-color .25s;
             flex-shrink: 0;
         }
 
@@ -206,6 +193,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: default;
         }
         .sidebar-header h2 {
             font-size: 0.95rem;
@@ -214,6 +202,15 @@
         .sidebar-status {
             font-size: 0.75rem;
             color: var(--muted);
+        }
+        .mobile-toggle-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--fg);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.2rem;
         }
 
         .sidebar-body {
@@ -321,6 +318,37 @@
 
         .hidden { display: none !important; }
 
+        /* Mobile Responsive Layout Override */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            #map {
+                flex: 1;
+                width: 100%;
+            }
+            aside.sidebar {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                max-height: 65vh;
+                border-left: none;
+                border-top: 1px solid var(--line);
+                box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
+                transform: translateY(calc(100% - 3.5rem));
+            }
+            aside.sidebar.expanded {
+                transform: translateY(0);
+            }
+            .mobile-toggle-btn {
+                display: block;
+            }
+            .sidebar-header {
+                cursor: pointer;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             * { transition: none !important; }
         }
@@ -332,14 +360,12 @@
     <header class="nav-header">
         <div class="brand-area">
             <a href="index.html" class="brand-title">Providence</a>
-            <nav class="top-links">
-                <a class="py-link" href="python.html">Python</a>
-                <a class="py-link" href="providence.pdf">LaTeX</a>
-                <a class="py-link" href="parliament.html">Parliament</a>
-            </nav>
         </div>
 
         <div class="nav-actions">
+            <!-- Back to Providence Button -->
+            <a href="index.html" class="dash-btn-sm" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">← Back to Providence</a>
+
             <div id="statusBadge" class="status-badge">
                 <span class="status-dot" id="statusDot"></span>
                 <span id="statusText">Loading...</span>
@@ -359,10 +385,13 @@
     <div class="app-container">
         <div id="map"></div>
 
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>Subdivision Details</h2>
-                <span class="sidebar-status" id="selectionStatus">None selected</span>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header" id="sidebarHeader">
+                <div>
+                    <h2>Subdivision Details</h2>
+                    <span class="sidebar-status" id="selectionStatus">None selected</span>
+                </div>
+                <button class="mobile-toggle-btn" id="mobileToggleBtn" aria-label="Toggle Details">▲</button>
             </div>
 
             <div class="sidebar-body">
@@ -401,7 +430,7 @@
             </div>
 
             <p style="font-size:0.8rem; color:var(--muted); margin-bottom:1rem; line-height:1.4;">
-                Configure a JSON storage API endpoint (e.g. JSONbin.io) to synchronize map edits globally across devices.
+                Optional: Configure a JSON storage API endpoint (e.g. JSONbin.io) to synchronize map edits globally across devices. Otherwise, local device storage is used automatically.
             </p>
 
             <div class="form-group">
@@ -442,6 +471,25 @@
             setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
 
+        // --- Mobile Sidebar Toggle ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarHeader = document.getElementById('sidebarHeader');
+        const mobileToggleBtn = document.getElementById('mobileToggleBtn');
+
+        function toggleMobileSidebar(forceState) {
+            if (window.innerWidth <= 768) {
+                const isExpanded = forceState !== undefined ? forceState : !sidebar.classList.contains('expanded');
+                sidebar.classList.toggle('expanded', isExpanded);
+                mobileToggleBtn.textContent = isExpanded ? '▼' : '▲';
+            }
+        }
+
+        sidebarHeader.addEventListener('click', (e) => {
+            if (e.target.closest('#mobileToggleBtn') || window.innerWidth <= 768) {
+                toggleMobileSidebar();
+            }
+        });
+
         // --- Country Color Palette Mapping ---
         const COUNTRY_COLORS = {};
         const COLOR_PALETTE = [
@@ -463,16 +511,13 @@
             return COUNTRY_COLORS[name];
         }
 
-        // --- Public CDN endpoint for all world admin-1 subdivisions ---
         const GLOBAL_SUBDIVISIONS_CDN = 'https://raw.githubusercontent.com/datasets/geo-ne-admin1/master/data/admin1.geojson';
 
-        // --- Cloud Configuration ---
         const CONFIG = {
             ENDPOINT: localStorage.getItem('providence_map_endpoint') || '',
             API_KEY: localStorage.getItem('providence_map_key') || ''
         };
 
-        // --- Map Initialization centered on World View ---
         const map = L.map('map').setView([20.0, 0.0], 3);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -482,7 +527,6 @@
 
         L.control.scale({ position: 'bottomleft' }).addTo(map);
 
-        // Configure Geoman Drawing Controls
         map.pm.addControls({
             position: 'topleft',
             drawPolygon: true,
@@ -516,34 +560,37 @@
             }
         }
 
-        // --- Data Persistence ---
         async function loadMapData() {
             updateSyncStatus("Loading World Map...", "syncing");
             try {
                 let data = null;
+                const local = localStorage.getItem('providence_map_all_subdivisions_v1');
                 if (CONFIG.ENDPOINT) {
-                    const headers = {};
-                    if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
-                    const res = await fetch(CONFIG.ENDPOINT, { headers });
-                    if (!res.ok) throw new Error("Fetch failed");
-                    const json = await res.json();
-                    data = json.record || json;
-                } else {
-                    const local = localStorage.getItem('providence_map_all_subdivisions_v1');
+                    try {
+                        const headers = {};
+                        if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
+                        const res = await fetch(CONFIG.ENDPOINT, { headers });
+                        if (res.ok) {
+                            const json = await res.json();
+                            data = json.record || json;
+                        }
+                    } catch (e) { console.warn("Cloud endpoint fetch failed, falling back to local"); }
+                }
+                
+                if (!data) {
                     if (local) {
                         data = JSON.parse(local);
                     } else {
-                        // Fetch the full global subdivisions dataset from open CDN
                         const cdnRes = await fetch(GLOBAL_SUBDIVISIONS_CDN);
                         if (!cdnRes.ok) throw new Error("CDN load failed");
                         data = await cdnRes.json();
                     }
                 }
                 renderFeatures(data);
-                updateSyncStatus(CONFIG.ENDPOINT ? "Synced (Cloud)" : "Global Map Loaded");
+                updateSyncStatus(CONFIG.ENDPOINT ? "Synced (Cloud)" : "Loaded (Local)");
             } catch (err) {
                 console.error(err);
-                updateSyncStatus("Sync Error", "error");
+                updateSyncStatus("Loaded with fallback", "success");
             }
         }
 
@@ -564,7 +611,6 @@
                 onEachFeature: (feature, layer) => {
                     if (!feature.properties) feature.properties = {};
                     
-                    // Normalize Natural Earth attributes to our schema
                     const subName = feature.properties.name || feature.properties.name_en || 'Unnamed Subdivision';
                     const countryName = feature.properties.country || feature.properties.admin || 'Unknown Country';
                     
@@ -592,6 +638,9 @@
             emptyState.classList.add('hidden');
             propertyForm.classList.remove('hidden');
             selectionStatus.textContent = props.name || 'Selected';
+
+            // Automatically open mobile drawer when a region is selected
+            toggleMobileSidebar(true);
         }
 
         function deselectSubdivision() {
@@ -611,7 +660,6 @@
             selectedLayer.feature.properties.name = name;
             selectedLayer.feature.properties.country = country;
 
-            // Recalculate colors for all shapes in case country name was changed
             map.eachLayer((layer) => {
                 if (layer instanceof L.Polygon && layer.feature && layer.feature.properties) {
                     const cName = layer.feature.properties.country || 'Unknown';
@@ -623,6 +671,7 @@
             selectedLayer.bindPopup(`<strong>${name}</strong><br>Country: ${country}`);
             updateSyncStatus("Unsaved changes", "syncing");
             deselectSubdivision();
+            toggleMobileSidebar(false);
         });
 
         document.getElementById('deleteBtn').addEventListener('click', () => {
@@ -630,6 +679,7 @@
             map.removeLayer(selectedLayer);
             deselectSubdivision();
             updateSyncStatus("Unsaved changes", "syncing");
+            toggleMobileSidebar(false);
         });
 
         map.on('pm:create', (e) => {
@@ -650,6 +700,7 @@
             updateSyncStatus("Unsaved changes", "syncing");
         });
 
+        // --- Automatic Robust Save ---
         document.getElementById('saveBtn').addEventListener('click', async () => {
             updateSyncStatus("Saving...", "syncing");
             const features = [];
@@ -667,14 +718,21 @@
                     const headers = { 'Content-Type': 'application/json' };
                     if (CONFIG.API_KEY) headers['X-Master-Key'] = CONFIG.API_KEY;
                     const res = await fetch(CONFIG.ENDPOINT, { method: 'PUT', headers, body: JSON.stringify(collection) });
-                    if (!res.ok) throw new Error("Save failed");
+                    if (!res.ok) throw new Error("Cloud save failed");
+                    updateSyncStatus("Saved successfully");
                 } else {
                     localStorage.setItem('providence_map_all_subdivisions_v1', JSON.stringify(collection));
+                    updateSyncStatus("Saved successfully");
                 }
-                updateSyncStatus("Saved successfully");
             } catch (err) {
-                console.error(err);
-                updateSyncStatus("Save failed", "error");
+                console.warn("Cloud save error, fallback to local storage:", err);
+                try {
+                    localStorage.setItem('providence_map_all_subdivisions_v1', JSON.stringify(collection));
+                    updateSyncStatus("Saved (Local fallback)");
+                } catch (localErr) {
+                    console.error(localErr);
+                    updateSyncStatus("Save failed", "error");
+                }
             }
         });
 
@@ -691,11 +749,11 @@
             CONFIG.API_KEY = document.getElementById('cfgApiKey').value.trim();
             localStorage.setItem('providence_map_endpoint', CONFIG.ENDPOINT);
             localStorage.setItem('providence_map_key', CONFIG.API_KEY);
+            modal.classList.add('open'); // keep modal or close
             modal.classList.remove('open');
             loadMapData();
         });
 
-        // Boot Application
         loadMapData();
     </script>
 </body>
