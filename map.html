@@ -259,21 +259,6 @@
             gap: 0.75rem;
             margin-top: 1.5rem;
         }
-        .btn-danger {
-            background: transparent;
-            border: 1px solid var(--line);
-            color: #e11d48;
-            font-weight: 600;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: border-color .25s, background .25s;
-        }
-        .btn-danger:hover {
-            background: rgba(225, 29, 72, 0.08);
-            border-color: #e11d48;
-        }
 
         .hidden { display: none !important; }
     </style>
@@ -332,8 +317,7 @@
                     </div>
 
                     <div class="btn-row">
-                        <button type="submit" class="dash-btn-sm" style="flex:1;">Apply Changes</button>
-                        <button type="button" id="deleteBtn" class="btn-danger">Delete</button>
+                        <button type="submit" class="dash-btn-sm" style="width:100%;">Apply Changes</button>
                     </div>
                 </form>
             </div>
@@ -396,21 +380,21 @@
         }
 
         const GLOBAL_SUBDIVISIONS_CDN = 'https://raw.githubusercontent.com/datasets/geo-ne-admin1/master/data/admin1.geojson';
-
-        // Pre-configured shared cloud storage bin URL
         const CLOUD_ENDPOINT = 'https://api.npoint.io/3fec52567fc294073ef3';
 
         const map = L.map('map').setView([20.0, 0.0], 3);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
         L.control.scale({ position: 'bottomleft' }).addTo(map);
 
+        // Disabled deletion and cutting controls in Geoman
         map.pm.addControls({
             position: 'topleft',
             drawPolygon: true,
             drawRectangle: true,
             editMode: true,
             dragMode: true,
-            removalMode: true,
+            removalMode: false,
+            cutPolygon: false,
             drawMarker: false,
             drawCircleMarker: false,
             drawPolyLine: false,
@@ -503,21 +487,6 @@
             updateSyncStatus("Unsaved changes", "syncing");
             setDrawerOpen(false);
         });
-
-        document.getElementById('deleteBtn').addEventListener('click', () => {
-            if (!selectedLayer) return;
-            map.removeLayer(selectedLayer);
-            deselectSubdivision();
-            updateSyncStatus("Unsaved changes", "syncing");
-            setDrawerOpen(false);
-        });
-
-        function deselectSubdivision() {
-            selectedLayer = null;
-            emptyState.classList.remove('hidden');
-            propertyForm.classList.add('hidden');
-            selectionStatus.textContent = 'None selected';
-        }
 
         map.on('pm:create', (e) => {
             const layer = e.layer;
