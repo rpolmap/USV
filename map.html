@@ -175,25 +175,36 @@
             background: var(--bg);
         }
 
-        /* Sidebar Editor */
+        /* Universal Bottom Drawer Sidebar Layout */
         aside.sidebar {
-            width: 22rem;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 60vh;
             background: var(--panel);
-            border-left: 1px solid var(--line);
+            border-top: 1px solid var(--line);
             display: flex;
             flex-direction: column;
-            z-index: 20;
-            transition: transform 0.3s ease, background .25s, border-color .25s;
-            flex-shrink: 0;
+            z-index: 25;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.12);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background .25s, border-color .25s;
+            transform: translateY(calc(100% - 3.75rem));
+        }
+
+        aside.sidebar.expanded {
+            transform: translateY(0);
         }
 
         .sidebar-header {
-            padding: 1rem 1.25rem;
+            padding: 0.85rem 1.25rem;
             border-bottom: 1px solid var(--line);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            cursor: default;
+            cursor: pointer;
+            background: var(--panel);
+            user-select: none;
         }
         .sidebar-header h2 {
             font-size: 0.95rem;
@@ -202,15 +213,17 @@
         .sidebar-status {
             font-size: 0.75rem;
             color: var(--muted);
+            margin-left: 0.75rem;
         }
-        .mobile-toggle-btn {
-            display: none;
+        .toggle-arrow {
             background: none;
             border: none;
             color: var(--fg);
             cursor: pointer;
-            font-size: 1.1rem;
-            padding: 0.2rem;
+            font-size: 1rem;
+            padding: 0.25rem 0.5rem;
+            font-weight: bold;
+            transition: transform 0.2s;
         }
 
         .sidebar-body {
@@ -221,7 +234,7 @@
 
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
+            padding: 2rem 1rem;
             color: var(--muted);
             font-size: 0.85rem;
             line-height: 1.5;
@@ -318,37 +331,6 @@
 
         .hidden { display: none !important; }
 
-        /* Mobile Responsive Layout Override */
-        @media (max-width: 768px) {
-            .app-container {
-                flex-direction: column;
-            }
-            #map {
-                flex: 1;
-                width: 100%;
-            }
-            aside.sidebar {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                max-height: 65vh;
-                border-left: none;
-                border-top: 1px solid var(--line);
-                box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
-                transform: translateY(calc(100% - 3.5rem));
-            }
-            aside.sidebar.expanded {
-                transform: translateY(0);
-            }
-            .mobile-toggle-btn {
-                display: block;
-            }
-            .sidebar-header {
-                cursor: pointer;
-            }
-        }
-
         @media (prefers-reduced-motion: reduce) {
             * { transition: none !important; }
         }
@@ -385,13 +367,14 @@
     <div class="app-container">
         <div id="map"></div>
 
+        <!-- Universal Bottom Drawer Subdivision Details Panel -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header" id="sidebarHeader">
-                <div>
+                <div style="display: flex; align-items: center; overflow: hidden;">
                     <h2>Subdivision Details</h2>
                     <span class="sidebar-status" id="selectionStatus">None selected</span>
                 </div>
-                <button class="mobile-toggle-btn" id="mobileToggleBtn" aria-label="Toggle Details">▲</button>
+                <button class="toggle-arrow" id="toggleArrow" aria-label="Toggle Menu">▲</button>
             </div>
 
             <div class="sidebar-body">
@@ -471,23 +454,19 @@
             setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
 
-        // --- Mobile Sidebar Toggle ---
+        // --- Bottom Drawer Toggle Logic (Unified Across All Devices) ---
         const sidebar = document.getElementById('sidebar');
         const sidebarHeader = document.getElementById('sidebarHeader');
-        const mobileToggleBtn = document.getElementById('mobileToggleBtn');
+        const toggleArrow = document.getElementById('toggleArrow');
 
-        function toggleMobileSidebar(forceState) {
-            if (window.innerWidth <= 768) {
-                const isExpanded = forceState !== undefined ? forceState : !sidebar.classList.contains('expanded');
-                sidebar.classList.toggle('expanded', isExpanded);
-                mobileToggleBtn.textContent = isExpanded ? '▼' : '▲';
-            }
+        function setDrawerOpen(open) {
+            sidebar.classList.toggle('expanded', open);
+            toggleArrow.textContent = open ? '▼' : '▲';
         }
 
-        sidebarHeader.addEventListener('click', (e) => {
-            if (e.target.closest('#mobileToggleBtn') || window.innerWidth <= 768) {
-                toggleMobileSidebar();
-            }
+        sidebarHeader.addEventListener('click', () => {
+            const isOpen = sidebar.classList.contains('expanded');
+            setDrawerOpen(!isOpen);
         });
 
         // --- Country Color Palette Mapping ---
@@ -637,10 +616,10 @@
 
             emptyState.classList.add('hidden');
             propertyForm.classList.remove('hidden');
-            selectionStatus.textContent = props.name || 'Selected';
+            selectionStatus.textContent = `(${props.name || 'Selected'})`;
 
-            // Automatically open mobile drawer when a region is selected
-            toggleMobileSidebar(true);
+            // Automatically slide open the bottom drawer to reveal subdivision details
+            setDrawerOpen(true);
         }
 
         function deselectSubdivision() {
@@ -671,7 +650,7 @@
             selectedLayer.bindPopup(`<strong>${name}</strong><br>Country: ${country}`);
             updateSyncStatus("Unsaved changes", "syncing");
             deselectSubdivision();
-            toggleMobileSidebar(false);
+            setDrawerOpen(false);
         });
 
         document.getElementById('deleteBtn').addEventListener('click', () => {
@@ -679,7 +658,7 @@
             map.removeLayer(selectedLayer);
             deselectSubdivision();
             updateSyncStatus("Unsaved changes", "syncing");
-            toggleMobileSidebar(false);
+            setDrawerOpen(false);
         });
 
         map.on('pm:create', (e) => {
@@ -749,7 +728,6 @@
             CONFIG.API_KEY = document.getElementById('cfgApiKey').value.trim();
             localStorage.setItem('providence_map_endpoint', CONFIG.ENDPOINT);
             localStorage.setItem('providence_map_key', CONFIG.API_KEY);
-            modal.classList.add('open'); // keep modal or close
             modal.classList.remove('open');
             loadMapData();
         });
