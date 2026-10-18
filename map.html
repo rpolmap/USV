@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Providence - Map Tool</title>
+    <title>Providence - Global Subdivisions Tool</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -342,7 +342,7 @@
         <div class="nav-actions">
             <div id="statusBadge" class="status-badge">
                 <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Synced</span>
+                <span id="statusText">Loading...</span>
             </div>
 
             <button id="saveBtn" class="dash-btn-sm" type="button">Save Changes</button>
@@ -445,16 +445,9 @@
         // --- Country Color Palette Mapping ---
         const COUNTRY_COLORS = {};
         const COLOR_PALETTE = [
-            '#3b82f6', // Blue
-            '#10b981', // Emerald
-            '#f59e0b', // Amber
-            '#ef4444', // Red
-            '#8b5cf6', // Purple
-            '#ec4899', // Pink
-            '#06b6d4', // Cyan
-            '#84cc16', // Lime
-            '#f97316', // Orange
-            '#6366f1'  // Indigo
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+            '#14b8a6', '#a855f7', '#d97706', '#0284c7', '#ca8a04'
         ];
 
         function getCountryColor(countryName) {
@@ -470,36 +463,17 @@
             return COUNTRY_COLORS[name];
         }
 
+        // --- Public CDN endpoint for all world admin-1 subdivisions ---
+        const GLOBAL_SUBDIVISIONS_CDN = 'https://raw.githubusercontent.com/datasets/geo-ne-admin1/master/data/admin1.geojson';
+
         // --- Cloud Configuration ---
         const CONFIG = {
             ENDPOINT: localStorage.getItem('providence_map_endpoint') || '',
             API_KEY: localStorage.getItem('providence_map_key') || ''
         };
 
-        const DEFAULT_GEOJSON = {
-            "type": "FeatureCollection",
-            "features": [
-                {
-                    "type": "Feature",
-                    "properties": { "id": "sub-1", "name": "Providence Central", "country": "Providence" },
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[[-0.135, 51.500], [-0.115, 51.500], [-0.115, 51.515], [-0.135, 51.515], [-0.135, 51.500]]]
-                    }
-                },
-                {
-                    "type": "Feature",
-                    "properties": { "id": "sub-2", "name": "North District", "country": "Oakhaven" },
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[[-0.140, 51.520], [-0.120, 51.520], [-0.120, 51.535], [-0.140, 51.535], [-0.140, 51.520]]]
-                    }
-                }
-            ]
-        };
-
-        // --- Map Initialization ---
-        const map = L.map('map').setView([51.51, -0.12], 13);
+        // --- Map Initialization centered on World View ---
+        const map = L.map('map').setView([20.0, 0.0], 3);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -544,7 +518,7 @@
 
         // --- Data Persistence ---
         async function loadMapData() {
-            updateSyncStatus("Syncing...", "syncing");
+            updateSyncStatus("Loading World Map...", "syncing");
             try {
                 let data = null;
                 if (CONFIG.ENDPOINT) {
@@ -555,16 +529,21 @@
                     const json = await res.json();
                     data = json.record || json;
                 } else {
-                    const local = localStorage.getItem('providence_map_data');
-                    data = local ? JSON.parse(local) : DEFAULT_GEOJSON;
+                    const local = localStorage.getItem('providence_map_all_subdivisions_v1');
+                    if (local) {
+                        data = JSON.parse(local);
+                    } else {
+                        // Fetch the full global subdivisions dataset from open CDN
+                        const cdnRes = await fetch(GLOBAL_SUBDIVISIONS_CDN);
+                        if (!cdnRes.ok) throw new Error("CDN load failed");
+                        data = await cdnRes.json();
+                    }
                 }
                 renderFeatures(data);
-                updateSyncStatus(CONFIG.ENDPOINT ? "Synced (Cloud)" : "Loaded (Local)");
+                updateSyncStatus(CONFIG.ENDPOINT ? "Synced (Cloud)" : "Global Map Loaded");
             } catch (err) {
                 console.error(err);
                 updateSyncStatus("Sync Error", "error");
-                const local = localStorage.getItem('providence_map_data');
-                renderFeatures(local ? JSON.parse(local) : DEFAULT_GEOJSON);
             }
         }
 
@@ -573,21 +552,30 @@
 
             geoJsonLayer = L.geoJSON(data, {
                 style: (feature) => {
-                    const country = feature.properties ? feature.properties.country : 'Unknown';
+                    const country = (feature.properties && (feature.properties.country || feature.properties.admin)) ? (feature.properties.country || feature.properties.admin) : 'Unknown';
                     const col = getCountryColor(country);
                     return {
                         color: col,
                         fillColor: col,
-                        fillOpacity: 0.4,
-                        weight: 2
+                        fillOpacity: 0.45,
+                        weight: 1
                     };
                 },
                 onEachFeature: (feature, layer) => {
                     if (!feature.properties) feature.properties = {};
+                    
+                    // Normalize Natural Earth attributes to our schema
+                    const subName = feature.properties.name || feature.properties.name_en || 'Unnamed Subdivision';
+                    const countryName = feature.properties.country || feature.properties.admin || 'Unknown Country';
+                    
+                    feature.properties.name = subName;
+                    feature.properties.country = countryName;
+                    
                     if (!feature.properties.id) {
                         feature.properties.id = 'sub-' + Math.random().toString(36).substr(2, 9);
                     }
-                    layer.bindPopup(`<strong>${feature.properties.name || 'Unnamed'}</strong><br>Country: ${feature.properties.country || 'Unknown'}`);
+
+                    layer.bindPopup(`<strong>${subName}</strong><br>Country: ${countryName}`);
                     layer.on('click', () => selectSubdivision(layer));
                 }
             }).addTo(map);
@@ -623,8 +611,15 @@
             selectedLayer.feature.properties.name = name;
             selectedLayer.feature.properties.country = country;
 
-            const col = getCountryColor(country);
-            selectedLayer.setStyle({ color: col, fillColor: col });
+            // Recalculate colors for all shapes in case country name was changed
+            map.eachLayer((layer) => {
+                if (layer instanceof L.Polygon && layer.feature && layer.feature.properties) {
+                    const cName = layer.feature.properties.country || 'Unknown';
+                    const col = getCountryColor(cName);
+                    layer.setStyle({ color: col, fillColor: col, fillOpacity: 0.45 });
+                }
+            });
+
             selectedLayer.bindPopup(`<strong>${name}</strong><br>Country: ${country}`);
             updateSyncStatus("Unsaved changes", "syncing");
             deselectSubdivision();
@@ -640,7 +635,7 @@
         map.on('pm:create', (e) => {
             const layer = e.layer;
             const id = 'sub-' + Math.random().toString(36).substr(2, 9);
-            const defaultCountry = "Providence";
+            const defaultCountry = "United States";
             const col = getCountryColor(defaultCountry);
 
             layer.feature = {
@@ -648,7 +643,7 @@
                 properties: { id: id, name: "New Region", country: defaultCountry },
                 geometry: layer.toGeoJSON().geometry
             };
-            layer.setStyle({ color: col, fillColor: col, fillOpacity: 0.4 });
+            layer.setStyle({ color: col, fillColor: col, fillOpacity: 0.45 });
             layer.bindPopup(`<strong>New Region</strong><br>Country: ${defaultCountry}`);
             layer.on('click', () => selectSubdivision(layer));
             selectSubdivision(layer);
@@ -674,7 +669,7 @@
                     const res = await fetch(CONFIG.ENDPOINT, { method: 'PUT', headers, body: JSON.stringify(collection) });
                     if (!res.ok) throw new Error("Save failed");
                 } else {
-                    localStorage.setItem('providence_map_data', JSON.stringify(collection));
+                    localStorage.setItem('providence_map_all_subdivisions_v1', JSON.stringify(collection));
                 }
                 updateSyncStatus("Saved successfully");
             } catch (err) {
