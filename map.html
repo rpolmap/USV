@@ -1,536 +1,323 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Providence - Global Subdivisions Tool</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet-Geoman CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Providence - Global Subdivisions Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css" />
+<style>
+:root{--bg:#f6f6f3;--fg:#14161a;--muted:#6b7078;--panel:#fff;--line:#dcdcd6;--btn-bg:#14161a;--btn-fg:#f6f6f3}
+:root[data-theme="dark"]{--bg:#14161a;--fg:#f2f2ee;--muted:#9aa0a8;--panel:#1c1f25;--line:#2c3037;--btn-bg:#f2f2ee;--btn-fg:#14161a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow:hidden}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--fg);transition:background .25s,color .25s;display:flex;flex-direction:column}
+header.nav-header{min-height:4rem;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;background:var(--panel);border-bottom:1px solid var(--line);z-index:30;flex-shrink:0}
+.brand-title{font-size:1.25rem;font-weight:800;letter-spacing:-.03em;text-decoration:none;color:var(--fg)}
+.nav-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.status-badge{font-size:.75rem;font-weight:600;padding:.35rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--muted);display:flex;align-items:center;gap:.4rem}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#10b981}
+.dash-btn-sm{font:inherit;font-size:.85rem;font-weight:600;padding:.5rem 1rem;border:none;border-radius:8px;background:var(--btn-bg);color:var(--btn-fg);cursor:pointer;transition:transform .15s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.dash-btn-sm:hover{transform:translateY(-1px)}
+.dash-btn-sm:disabled{opacity:.5;cursor:default}
+.theme-switch{position:relative;width:52px;height:28px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;padding:0}
+.theme-switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--fg);transition:transform .25s}
+:root[data-theme="dark"] .theme-switch::after{transform:translateX(24px)}
+.app-container{flex:1;min-height:0;display:flex;position:relative;overflow:hidden}
+#map{flex:1;height:100%;z-index:10;background:var(--bg)}
 
-    <style>
-        :root {
-            --bg: #f6f6f3;
-            --fg: #14161a;
-            --muted: #6b7078;
-            --panel: #ffffff;
-            --line: #dcdcd6;
-            --btn-bg: #14161a;
-            --btn-fg: #f6f6f3;
-            --overlay: rgba(20, 22, 26, 0.45);
-        }
-        :root[data-theme="dark"] {
-            --bg: #14161a;
-            --fg: #f2f2ee;
-            --muted: #9aa0a8;
-            --panel: #1c1f25;
-            --line: #2c3037;
-            --btn-bg: #f2f2ee;
-            --btn-fg: #14161a;
-            --overlay: rgba(0, 0, 0, 0.65);
-        }
+/* No delete/removal button, ever (desktop and mobile) */
+.leaflet-pm-icon-delete,
+.button-container .leaflet-pm-icon-delete,
+.leaflet-pm-toolbar [title*="elete"],
+.leaflet-pm-toolbar [title*="emove"]{display:none !important}
+.leaflet-pm-toolbar .button-container:has(.leaflet-pm-icon-delete){display:none !important}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; width: 100%; overflow: hidden; }
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--fg);
-            transition: background .25s, color .25s;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Header Navigation */
-        header.nav-header {
-            height: 4rem;
-            padding: 0 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--panel);
-            border-bottom: 1px solid var(--line);
-            z-index: 30;
-            flex-shrink: 0;
-            transition: background .25s, border-color .25s;
-        }
-
-        .brand-area {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .brand-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            text-decoration: none;
-            color: var(--fg);
-        }
-
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        /* Status Badge */
-        .status-badge {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.35rem 0.75rem;
-            border-radius: 999px;
-            border: 1px solid var(--line);
-            background: var(--bg);
-            color: var(--muted);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #10b981;
-        }
-
-        /* Buttons */
-        .dash-btn-sm {
-            font: inherit;
-            font-size: 0.85rem;
-            font-weight: 600;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 8px;
-            background: var(--btn-bg);
-            color: var(--btn-fg);
-            cursor: pointer;
-            transition: background .25s, color .25s, transform .15s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .dash-btn-sm:hover { transform: translateY(-1px); }
-        .dash-btn-sm:active { transform: translateY(0); }
-
-        /* Theme Switcher */
-        .theme-switch {
-            position: relative;
-            width: 52px;
-            height: 28px;
-            border-radius: 999px;
-            border: 1px solid var(--line);
-            background: var(--panel);
-            cursor: pointer;
-            padding: 0;
-            transition: background .25s, border-color .25s;
-        }
-        .theme-switch::after {
-            content: "";
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--fg);
-            transition: transform .25s, background .25s;
-        }
-        :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
-
-        /* Main Workspace Container */
-        .app-container {
-            flex: 1;
-            display: flex;
-            position: relative;
-            overflow: hidden;
-            height: calc(100vh - 4rem);
-        }
-
-        #map {
-            flex: 1;
-            height: 100%;
-            z-index: 10;
-            background: var(--bg);
-        }
-
-        /* Universal Bottom Drawer Sidebar Layout */
-        aside.sidebar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            max-height: 60vh;
-            background: var(--panel);
-            border-top: 1px solid var(--line);
-            display: flex;
-            flex-direction: column;
-            z-index: 25;
-            box-shadow: 0 -10px 25px rgba(0,0,0,0.12);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background .25s, border-color .25s;
-            transform: translateY(calc(100% - 3.75rem));
-        }
-
-        aside.sidebar.expanded {
-            transform: translateY(0);
-        }
-
-        .sidebar-header {
-            padding: 0.85rem 1.25rem;
-            border-bottom: 1px solid var(--line);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            background: var(--panel);
-            user-select: none;
-        }
-        .sidebar-header h2 {
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-        .sidebar-status {
-            font-size: 0.75rem;
-            color: var(--muted);
-            margin-left: 0.75rem;
-        }
-        .toggle-arrow {
-            background: none;
-            border: none;
-            color: var(--fg);
-            cursor: pointer;
-            font-size: 1rem;
-            padding: 0.25rem 0.5rem;
-            font-weight: bold;
-        }
-
-        .sidebar-body {
-            padding: 1.25rem;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 2rem 1rem;
-            color: var(--muted);
-            font-size: 0.85rem;
-            line-height: 1.5;
-        }
-
-        /* Forms */
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-        .form-label {
-            display: block;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--muted);
-            margin-bottom: 0.4rem;
-        }
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            font: inherit;
-            font-size: 0.875rem;
-            color: var(--fg);
-            background: var(--bg);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            outline: none;
-            transition: border-color .25s;
-        }
-        .form-input:focus {
-            border-color: var(--fg);
-        }
-
-        .btn-row {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
-        }
-
-        .hidden { display: none !important; }
-    </style>
+aside.sidebar{position:absolute;bottom:0;left:0;width:100%;max-height:60vh;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;z-index:25;box-shadow:0 -10px 25px rgba(0,0,0,.12);transition:transform .3s cubic-bezier(.16,1,.3,1);transform:translateY(calc(100% - 3.75rem))}
+aside.sidebar.expanded{transform:translateY(0)}
+.sidebar-header{padding:.85rem 1.25rem;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--panel);user-select:none}
+.sidebar-header h2{font-size:.95rem;font-weight:700}
+.sidebar-status{font-size:.75rem;color:var(--muted);margin-left:.75rem}
+.toggle-arrow{background:none;border:none;color:var(--fg);cursor:pointer;font-size:1rem;padding:.25rem .5rem;font-weight:bold}
+.sidebar-body{padding:1.25rem;flex:1;overflow-y:auto}
+.empty-state{text-align:center;padding:2rem 1rem;color:var(--muted);font-size:.85rem;line-height:1.5}
+.form-group{margin-bottom:1.25rem}
+.form-label{display:block;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.4rem}
+.form-input{width:100%;padding:.75rem;font:inherit;font-size:.875rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;outline:none}
+.form-input:focus{border-color:var(--fg)}
+.btn-row{display:flex;gap:.75rem;margin-top:1.5rem}
+.hidden{display:none !important}
+</style>
 </head>
 <body>
+<header class="nav-header">
+  <a href="index.html" class="brand-title">Providence</a>
+  <div class="nav-actions">
+    <a href="index.html" class="dash-btn-sm" style="font-size:.75rem;padding:.4rem .8rem;">← Back to Providence</a>
+    <div id="statusBadge" class="status-badge"><span class="status-dot" id="statusDot"></span><span id="statusText">Loading...</span></div>
+    <button id="saveBtn" class="dash-btn-sm" type="button">Save Changes</button>
+    <button class="theme-switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="Dark mode"></button>
+  </div>
+</header>
 
-    <!-- Header Navigation -->
-    <header class="nav-header">
-        <div class="brand-area">
-            <a href="index.html" class="brand-title">Providence</a>
-        </div>
-
-        <div class="nav-actions">
-            <a href="index.html" class="dash-btn-sm" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">← Back to Providence</a>
-
-            <div id="statusBadge" class="status-badge">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Loading...</span>
-            </div>
-
-            <button id="saveBtn" class="dash-btn-sm" type="button">Save Changes</button>
-
-            <button class="theme-switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="Dark mode"></button>
-        </div>
-    </header>
-
-    <!-- Main Workspace -->
-    <div class="app-container">
-        <div id="map"></div>
-
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header" id="sidebarHeader">
-                <div style="display: flex; align-items: center; overflow: hidden;">
-                    <h2>Subdivision Details</h2>
-                    <span class="sidebar-status" id="selectionStatus">None selected</span>
-                </div>
-                <button class="toggle-arrow" id="toggleArrow" aria-label="Toggle Menu">▲</button>
-            </div>
-
-            <div class="sidebar-body">
-                <div id="emptyState" class="empty-state">
-                    Click an existing region or use the drawing tools on the map to edit subdivisions.
-                </div>
-
-                <form id="propertyForm" class="hidden">
-                    <input type="hidden" id="shapeId">
-
-                    <div class="form-group">
-                        <label class="form-label" for="subName">Subdivision Name</label>
-                        <input type="text" id="subName" class="form-input" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="subCountry">Country / Region Group</label>
-                        <input type="text" id="subCountry" class="form-input" required>
-                    </div>
-
-                    <div class="btn-row">
-                        <button type="submit" class="dash-btn-sm" style="width:100%;">Apply Changes</button>
-                    </div>
-                </form>
-            </div>
-        </aside>
+<div class="app-container">
+  <div id="map"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header" id="sidebarHeader">
+      <div style="display:flex;align-items:center;overflow:hidden;">
+        <h2>Subdivision Details</h2>
+        <span class="sidebar-status" id="selectionStatus">None selected</span>
+      </div>
+      <button class="toggle-arrow" id="toggleArrow" aria-label="Toggle Menu">▲</button>
     </div>
+    <div class="sidebar-body">
+      <div id="emptyState" class="empty-state">Click an existing region or use the drawing tools on the map to edit subdivisions.</div>
+      <form id="propertyForm" class="hidden">
+        <input type="hidden" id="shapeId">
+        <div class="form-group">
+          <label class="form-label" for="subName">Subdivision Name</label>
+          <input type="text" id="subName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="subCountry">Country / Region Group</label>
+          <input type="text" id="subCountry" class="form-input" required>
+        </div>
+        <div class="btn-row"><button type="submit" class="dash-btn-sm" style="width:100%;">Apply Changes</button></div>
+      </form>
+    </div>
+  </aside>
+</div>
 
-    <!-- Leaflet & Geoman Libraries -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
+<script>
+if (typeof L === 'undefined') {
+  document.getElementById('statusText').textContent = 'Map library failed to load';
+  document.getElementById('statusDot').style.background = '#ef4444';
+  throw new Error('Leaflet failed to load (blocked or offline)');
+}
+const root = document.documentElement;
+const switchBtn = document.getElementById('themeSwitch');
+function setTheme(t){
+  root.setAttribute('data-theme', t);
+  switchBtn.setAttribute('aria-checked', t === 'dark');
+  try { localStorage.setItem('providence-theme', t); } catch(e){}
+}
+try { const s = localStorage.getItem('providence-theme'); if (s) setTheme(s); } catch(e){}
+switchBtn.addEventListener('click', () => setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 
-    <script>
-        const root = document.documentElement;
-        const switchBtn = document.getElementById('themeSwitch');
-        
-        function setTheme(theme) {
-            root.setAttribute('data-theme', theme);
-            switchBtn.setAttribute('aria-checked', theme === 'dark');
-            try { localStorage.setItem('providence-theme', theme); } catch (e) {}
-        }
-        
-        try {
-            const saved = localStorage.getItem('providence-theme');
-            if (saved) setTheme(saved);
-        } catch (e) {}
-        
-        switchBtn.addEventListener('click', () => {
-            setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-        });
+const sidebar = document.getElementById('sidebar');
+const toggleArrow = document.getElementById('toggleArrow');
+function setDrawerOpen(open){
+  sidebar.classList.toggle('expanded', open);
+  toggleArrow.textContent = open ? '▼' : '▲';
+}
+document.getElementById('sidebarHeader').addEventListener('click', () => setDrawerOpen(!sidebar.classList.contains('expanded')));
 
-        const sidebar = document.getElementById('sidebar');
-        const sidebarHeader = document.getElementById('sidebarHeader');
-        const toggleArrow = document.getElementById('toggleArrow');
+const COLOR_PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7','#d97706','#0284c7','#ca8a04'];
+function getCountryColor(c){
+  const name = (c || 'Unknown').trim();
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return COLOR_PALETTE[Math.abs(h) % COLOR_PALETTE.length];
+}
 
-        function setDrawerOpen(open) {
-            sidebar.classList.toggle('expanded', open);
-            toggleArrow.textContent = open ? '▼' : '▲';
-        }
+const BASE_URL = 'https://raw.githubusercontent.com/datasets/geo-ne-admin1/master/data/admin1.geojson';
+const CLOUD_ENDPOINT = 'https://api.npoint.io/3fec52567fc294073ef3';
 
-        sidebarHeader.addEventListener('click', () => {
-            setDrawerOpen(!sidebar.classList.contains('expanded'));
-        });
+const map = L.map('map').setView([20, 0], 3);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+L.control.scale({ position: 'bottomleft' }).addTo(map);
 
-        const COUNTRY_COLORS = {};
-        const COLOR_PALETTE = [
-            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-            '#14b8a6', '#a855f7', '#d97706', '#0284c7', '#ca8a04'
-        ];
+map.pm.addControls({
+  position: 'topleft',
+  drawPolygon: true, drawRectangle: true,
+  editMode: true, dragMode: true,
+  removalMode: false, cutPolygon: false, rotateMode: false,
+  drawMarker: false, drawCircleMarker: false, drawPolyline: false, drawCircle: false, drawText: false
+});
+map.pm.setGlobalOptions({ preventMarkerRemoval: true });
 
-        function getCountryColor(countryName) {
-            const name = (countryName || 'Unknown').trim();
-            if (!COUNTRY_COLORS[name]) {
-                let hash = 0;
-                for (let i = 0; i < name.length; i++) {
-                    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                COUNTRY_COLORS[name] = COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
-            }
-            return COUNTRY_COLORS[name];
-        }
+let geoJsonLayer = null;
+let selectedLayer = null;
+const edited = new Map(); // id -> feature (only changed/new shapes get saved)
 
-        const GLOBAL_SUBDIVISIONS_CDN = 'https://raw.githubusercontent.com/datasets/geo-ne-admin1/master/data/admin1.geojson';
-        const CLOUD_ENDPOINT = 'https://api.npoint.io/3fec52567fc294073ef3';
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const emptyState = document.getElementById('emptyState');
+const propertyForm = document.getElementById('propertyForm');
+const selectionStatus = document.getElementById('selectionStatus');
+const saveBtn = document.getElementById('saveBtn');
 
-        const map = L.map('map').setView([20.0, 0.0], 3);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-        L.control.scale({ position: 'bottomleft' }).addTo(map);
+function updateSyncStatus(text, type = 'success'){
+  statusText.textContent = text;
+  statusDot.style.background = type === 'success' ? '#10b981' : (type === 'syncing' ? '#f59e0b' : '#ef4444');
+}
 
-        // Disabled deletion and cutting controls in Geoman
-        map.pm.addControls({
-            position: 'topleft',
-            drawPolygon: true,
-            drawRectangle: true,
-            editMode: true,
-            dragMode: true,
-            removalMode: false,
-            cutPolygon: false,
-            drawMarker: false,
-            drawCircleMarker: false,
-            drawPolyLine: false,
-            drawCircle: false
-        });
+function makeId(f){
+  const p = f.properties || {};
+  if (p.id) return String(p.id);
+  const code = p.adm1_code || p.iso_3166_2 || p.gn_id || p.adm1_cod_1;
+  if (code) return 'ne-' + code;
+  return 'ne-' + (p.name || 'x') + '-' + (p.admin || p.country || 'x');
+}
 
-        let geoJsonLayer = null;
-        let selectedLayer = null;
+function round(c){
+  return Array.isArray(c[0]) ? c.map(round) : [Math.round(c[0] * 1e5) / 1e5, Math.round(c[1] * 1e5) / 1e5];
+}
 
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const emptyState = document.getElementById('emptyState');
-        const propertyForm = document.getElementById('propertyForm');
-        const selectionStatus = document.getElementById('selectionStatus');
+function markEdited(layer){
+  const f = layer.feature;
+  if (!f) return;
+  const g = layer.toGeoJSON().geometry;
+  f.geometry = { type: g.type, coordinates: round(g.coordinates) };
+  edited.set(f.properties.id, f);
+  updateSyncStatus('Unsaved changes', 'syncing');
+}
 
-        function updateSyncStatus(text, type = 'success') {
-            statusText.textContent = text;
-            statusDot.style.background = type === 'success' ? '#10b981' : (type === 'syncing' ? '#f59e0b' : '#ef4444');
-        }
+function wireLayer(layer){
+  const p = layer.feature.properties;
+  layer.bindPopup(`<strong>${p.name}</strong><br>Country: ${p.country}`);
+  layer.on('click', () => selectSubdivision(layer));
+  layer.on('pm:edit', () => markEdited(layer));
+  layer.on('pm:dragend', () => markEdited(layer));
+}
 
-        async function loadMapData() {
-            updateSyncStatus("Loading Map...", "syncing");
-            try {
-                let data = null;
-                const res = await fetch(CLOUD_ENDPOINT);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json && json.features && json.features.length > 0) {
-                        data = json;
-                    }
-                }
-                if (!data) {
-                    const cdnRes = await fetch(GLOBAL_SUBDIVISIONS_CDN);
-                    data = await cdnRes.json();
-                }
-                renderFeatures(data);
-                updateSyncStatus("Synced (Cloud)");
-            } catch (err) {
-                console.error(err);
-                updateSyncStatus("Load Error", "error");
-            }
-        }
+async function fetchJson(url){
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url + ' -> HTTP ' + r.status);
+  return r.json();
+}
 
-        function renderFeatures(data) {
-            if (geoJsonLayer) map.removeLayer(geoJsonLayer);
-            geoJsonLayer = L.geoJSON(data, {
-                style: (feature) => {
-                    const country = (feature.properties && (feature.properties.country || feature.properties.admin)) || 'Unknown';
-                    const col = getCountryColor(country);
-                    return { color: col, fillColor: col, fillOpacity: 0.45, weight: 1 };
-                },
-                onEachFeature: (feature, layer) => {
-                    if (!feature.properties) feature.properties = {};
-                    const subName = feature.properties.name || feature.properties.name_en || 'Unnamed';
-                    const countryName = feature.properties.country || feature.properties.admin || 'Unknown';
-                    feature.properties.name = subName;
-                    feature.properties.country = countryName;
-                    if (!feature.properties.id) feature.properties.id = 'sub-' + Math.random().toString(36).substr(2, 9);
+const BASE_MIRRORS = [
+  BASE_URL,
+  'https://cdn.jsdelivr.net/gh/datasets/geo-ne-admin1@master/data/admin1.geojson'
+];
 
-                    layer.bindPopup(`<strong>${subName}</strong><br>Country: ${countryName}`);
-                    layer.on('click', () => selectSubdivision(layer));
-                }
-            }).addTo(map);
-        }
+async function loadBase(){
+  let lastErr;
+  for (const url of BASE_MIRRORS) {
+    try { return await fetchJson(url); }
+    catch (e) { lastErr = e; console.error('Base data failed:', url, e); }
+  }
+  throw new Error('Base map data failed to load: ' + lastErr.message);
+}
 
-        function selectSubdivision(layer) {
-            selectedLayer = layer;
-            const props = layer.feature.properties;
-            document.getElementById('shapeId').value = props.id || '';
-            document.getElementById('subName').value = props.name || '';
-            document.getElementById('subCountry').value = props.country || '';
-            emptyState.classList.add('hidden');
-            propertyForm.classList.remove('hidden');
-            selectionStatus.textContent = `(${props.name || 'Selected'})`;
-            setDrawerOpen(true);
-        }
+async function loadMapData(){
+  updateSyncStatus('Loading map...', 'syncing');
+  let cloud = null, cloudErr = null;
+  try { cloud = await fetchJson(CLOUD_ENDPOINT); }
+  catch (e) { cloudErr = e; console.error('Cloud load failed:', e); }
+  try {
+    const base = await loadBase();
+    const cloudFeatures = (cloud && Array.isArray(cloud.features)) ? cloud.features : [];
+    cloudFeatures.forEach(f => {
+      if (f.properties && f.properties.id) edited.set(String(f.properties.id), f);
+    });
 
-        propertyForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (!selectedLayer) return;
-            selectedLayer.feature.properties.name = document.getElementById('subName').value;
-            selectedLayer.feature.properties.country = document.getElementById('subCountry').value;
-            
-            map.eachLayer((layer) => {
-                if (layer instanceof L.Polygon && layer.feature && layer.feature.properties) {
-                    const col = getCountryColor(layer.feature.properties.country);
-                    layer.setStyle({ color: col, fillColor: col });
-                }
-            });
-            updateSyncStatus("Unsaved changes", "syncing");
-            setDrawerOpen(false);
-        });
+    const merged = [];
+    const used = new Set();
+    for (const f of base.features) {
+      f.properties = f.properties || {};
+      f.properties.id = makeId(f);
+      if (edited.has(f.properties.id)) {
+        merged.push(edited.get(f.properties.id));
+        used.add(f.properties.id);
+      } else merged.push(f);
+    }
+    for (const [id, f] of edited) if (!used.has(id)) merged.push(f);
 
-        map.on('pm:create', (e) => {
-            const layer = e.layer;
-            const id = 'sub-' + Math.random().toString(36).substr(2, 9);
-            const defaultCountry = "United States";
-            const col = getCountryColor(defaultCountry);
+    renderFeatures({ type: 'FeatureCollection', features: merged });
+    if (cloudErr) updateSyncStatus('Loaded, but cloud unreachable', 'error');
+    else updateSyncStatus(cloudFeatures.length ? `Loaded (${cloudFeatures.length} saved edits)` : 'Loaded (no saved edits)');
+  } catch (err) {
+    console.error(err);
+    updateSyncStatus('Map data failed to load', 'error');
+  }
+}
 
-            layer.feature = {
-                type: "Feature",
-                properties: { id: id, name: "New Region", country: defaultCountry },
-                geometry: layer.toGeoJSON().geometry
-            };
-            layer.setStyle({ color: col, fillColor: col, fillOpacity: 0.45 });
-            layer.bindPopup(`<strong>New Region</strong><br>Country: ${defaultCountry}`);
-            layer.on('click', () => selectSubdivision(layer));
-            selectSubdivision(layer);
-            updateSyncStatus("Unsaved changes", "syncing");
-        });
+function renderFeatures(data){
+  if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+  geoJsonLayer = L.geoJSON(data, {
+    style: f => {
+      const c = getCountryColor((f.properties && (f.properties.country || f.properties.admin)) || 'Unknown');
+      return { color: c, fillColor: c, fillOpacity: .45, weight: 1 };
+    },
+    onEachFeature: (f, layer) => {
+      f.properties = f.properties || {};
+      f.properties.name = f.properties.name || f.properties.name_en || 'Unnamed';
+      f.properties.country = f.properties.country || f.properties.admin || 'Unknown';
+      if (!f.properties.id) f.properties.id = makeId(f);
+      wireLayer(layer);
+    }
+  }).addTo(map);
+}
 
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            updateSyncStatus("Saving...", "syncing");
-            const features = [];
-            map.eachLayer((layer) => {
-                if (layer instanceof L.Polygon && layer.feature) {
-                    layer.feature.geometry = layer.toGeoJSON().geometry;
-                    features.push(layer.feature);
-                }
-            });
+function selectSubdivision(layer){
+  selectedLayer = layer;
+  const p = layer.feature.properties;
+  document.getElementById('shapeId').value = p.id || '';
+  document.getElementById('subName').value = p.name || '';
+  document.getElementById('subCountry').value = p.country || '';
+  emptyState.classList.add('hidden');
+  propertyForm.classList.remove('hidden');
+  selectionStatus.textContent = `(${p.name || 'Selected'})`;
+  setDrawerOpen(true);
+}
 
-            try {
-                const res = await fetch(CLOUD_ENDPOINT, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: "FeatureCollection", features })
-                });
-                if (!res.ok) throw new Error("Save failed");
-                updateSyncStatus("Saved successfully");
-            } catch (err) {
-                console.error(err);
-                updateSyncStatus("Save failed", "error");
-            }
-        });
+propertyForm.addEventListener('submit', e => {
+  e.preventDefault();
+  if (!selectedLayer) return;
+  const p = selectedLayer.feature.properties;
+  p.name = document.getElementById('subName').value;
+  p.country = document.getElementById('subCountry').value;
+  const c = getCountryColor(p.country);
+  selectedLayer.setStyle({ color: c, fillColor: c });
+  selectedLayer.bindPopup(`<strong>${p.name}</strong><br>Country: ${p.country}`);
+  selectionStatus.textContent = `(${p.name})`;
+  markEdited(selectedLayer);
+  setDrawerOpen(false);
+});
 
-        loadMapData();
-    </script>
+map.on('pm:create', e => {
+  const layer = e.layer;
+  const country = 'United States';
+  const c = getCountryColor(country);
+  layer.feature = {
+    type: 'Feature',
+    properties: { id: 'sub-' + Math.random().toString(36).slice(2, 11), name: 'New Region', country },
+    geometry: layer.toGeoJSON().geometry
+  };
+  layer.setStyle({ color: c, fillColor: c, fillOpacity: .45 });
+  wireLayer(layer);
+  selectSubdivision(layer);
+  markEdited(layer);
+});
+
+saveBtn.addEventListener('click', async () => {
+  if (!edited.size) { updateSyncStatus('Nothing to save'); return; }
+  updateSyncStatus('Saving...', 'syncing');
+  saveBtn.disabled = true;
+  try {
+    const res = await fetch(CLOUD_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'FeatureCollection', features: [...edited.values()] })
+    });
+    if (!res.ok) throw new Error(res.status + ' ' + await res.text());
+    updateSyncStatus(`Saved ${edited.size} edit${edited.size === 1 ? '' : 's'}`);
+  } catch (err) {
+    console.error('Save failed:', err);
+    updateSyncStatus('Save failed', 'error');
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+loadMapData();
+</script>
 </body>
 </html>
