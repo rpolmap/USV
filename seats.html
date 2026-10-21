@@ -180,11 +180,13 @@ const REP = [['Libertarians','#facc15'],['Progressives','#ec4899'],['Republicans
   ['UPP','#16a34a'],['AFP','#1e3a8a'],['Socialists','#7f1d1d'],['Greens','#86efac']];
 const NUB = [['Left','#ec4899'],['SDU','#dc2626'],['EMP','#f97316'],['DPP','#2563eb'],
   ['FLP','#facc15'],['LO','#000000'],['OI!','#4ade80']];
+const NEW500 = [['Left','#8b0000'],['SD','#dc2626'],['IC','#38bdf8'],['GL','#eab308'],['SN','#2563eb']];
 const equalSeats = (N, c) => { const s = distribute(N, c.map(() => 1)); return c.map(([n, col], i) => mk(n, s[i], col)); };
 
 const PRESETS = {
   republic: { label: 'American Republic (435)', rows: 9, size: 7, parties: () => equalSeats(435, REP) },
   nubria: { label: 'Nubria (600)', rows: 11, size: 6, parties: () => equalSeats(600, NUB) },
+  preset500: { label: '500 Seats Parliament', rows: 10, size: 7, parties: () => equalSeats(500, NEW500) },
   empty: { label: 'Empty', rows: 5, size: 10, parties: () => [] },
 };
 
