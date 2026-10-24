@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Providence</title>
+    <title>Home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
         :root {
             --bg: #f6f6f3;
             --fg: #14161a;
             --muted: #6b7078;
             --panel: #ffffff;
-            --line: #dcdcd6;
-            --btn-bg: #14161a;      /* buttons: opposite of page background */
-            --btn-fg: #f6f6f3;
+            --line: #e4e4de;
+            --hover: rgba(20, 22, 26, 0.045);
             --overlay: rgba(20, 22, 26, 0.45);
         }
         :root[data-theme="dark"] {
@@ -23,50 +23,30 @@
             --fg: #f2f2ee;
             --muted: #9aa0a8;
             --panel: #1c1f25;
-            --line: #2c3037;
-            --btn-bg: #f2f2ee;
-            --btn-fg: #14161a;
+            --line: #2a2e35;
+            --hover: rgba(242, 242, 238, 0.06);
             --overlay: rgba(0, 0, 0, 0.65);
         }
 
         * { box-sizing: border-box; margin: 0; }
-        html, body { height: 100%; }
+        html, body { min-height: 100%; }
         body {
             font-family: 'Inter', system-ui, sans-serif;
             background: var(--bg);
             color: var(--fg);
             transition: background .25s, color .25s;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 0 1rem;
+            justify-content: center;
+            padding: 0 1.25rem;
         }
-
-        /* Top-left links (terminal-style text) */
-        .top-links {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            display: flex;
-            gap: 1rem;
-        }
-        .py-link {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 0.75rem;
-            color: var(--muted);
-            text-decoration: none;
-            transition: color .25s;
-        }
-        .py-link:hover { color: var(--fg); }
-        .py-link:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
 
         /* Theme switch */
         .theme-switch {
             position: fixed;
             top: 1rem;
             right: 1rem;
-            width: 52px;
-            height: 28px;
+            width: 44px;
+            height: 24px;
             border-radius: 999px;
             border: 1px solid var(--line);
             background: var(--panel);
@@ -79,62 +59,91 @@
             position: absolute;
             top: 3px;
             left: 3px;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: var(--fg);
             transition: transform .25s, background .25s;
         }
-        :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
-        .theme-switch:focus-visible,
-        .dash-btn:focus-visible,
-        #wikiSearchInput:focus-visible,
-        .close-btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+        :root[data-theme="dark"] .theme-switch::after { transform: translateX(20px); }
 
-        /* Title */
-        header { margin-top: clamp(4rem, 14vh, 9rem); text-align: center; }
-        h1 {
-            font-size: clamp(3rem, 12vw, 6.5rem);
-            font-weight: 800;
-            letter-spacing: -0.04em;
-            line-height: 1;
-        }
-
-        /* Dashboard list */
-        .dashboard {
+        /* Layout */
+        main {
             width: 100%;
-            max-width: 32rem;
-            margin-top: clamp(2.5rem, 7vh, 4.5rem);
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 0.75rem;
-            list-style: none;
+            max-width: 24rem;
+            margin-top: clamp(4rem, 16vh, 9rem);
+            padding-bottom: 4rem;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
-            transition: background .25s, border-color .25s;
+            gap: 2.5rem;
         }
-        .dash-btn {
-            display: block;
-            width: 100%;
-            text-align: center;
-            text-decoration: none;
-            font: inherit;
-            font-weight: 600;
-            padding: 1.1rem 1.5rem;
-            border: none;
-            border-radius: 10px;
-            background: var(--btn-bg);
-            color: var(--btn-fg);
-            cursor: pointer;
-            transition: background .25s, color .25s, transform .15s;
-        }
-        .dash-btn:hover { transform: translateY(-2px); }
-        .dash-btn:active { transform: translateY(0); }
 
-        /* Fandom search modal */
-        #searchModal {
+        /* Category */
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            padding: 0 0.75rem 0.7rem;
+        }
+        .category-title img {
+            width: 1.5rem;
+            height: 1.5rem;
+            object-fit: contain;
+        }
+
+        /* Entries: plain rows, no button chrome */
+        .entries {
+            list-style: none;
+            padding: 0;
+            border-top: 1px solid var(--line);
+        }
+        .entry {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            width: 100%;
+            padding: 0.7rem 0.75rem;
+            font: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--fg);
+            text-align: left;
+            text-decoration: none;
+            background: none;
+            border: none;
+            border-bottom: 1px solid var(--line);
+            cursor: pointer;
+            transition: background .15s, padding-left .15s;
+        }
+        .entry .chev {
+            width: 0.9rem;
+            height: 0.9rem;
+            color: var(--muted);
+            flex: none;
+            transition: transform .15s, color .15s;
+        }
+        .entry:hover { background: var(--hover); padding-left: 1rem; }
+        .entry:hover .chev { color: var(--fg); transform: translateX(2px); }
+        .entry.with-icon { justify-content: flex-start; }
+        .entry.with-icon svg.icon {
+            width: 1.4rem;
+            height: 1.4rem;
+            flex: none;
+        }
+        .entry.with-icon .chev { margin-left: auto; }
+
+        .theme-switch:focus-visible,
+        .entry:focus-visible,
+        #wikiSearchInput:focus-visible,
+        .close-btn:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; }
+        .theme-switch:focus-visible { outline-offset: 3px; }
+
+        /* Modals */
+        .modal {
             position: fixed;
             inset: 0;
             background: var(--overlay);
@@ -145,49 +154,54 @@
             padding: 1rem;
             z-index: 50;
         }
-        #searchModal.open { display: flex; }
+        .modal.open { display: flex; }
         .modal-card {
             width: 100%;
-            max-width: 32rem;
+            max-width: 24rem;
             background: var(--panel);
             border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 1.5rem;
+            border-radius: 14px;
+            padding: 1.25rem 0.5rem 0.5rem;
             box-shadow: 0 20px 50px rgba(0,0,0,.25);
         }
         .modal-head {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            padding: 0 0.75rem 0.9rem;
         }
-        .modal-head h2 { font-size: 1.25rem; font-weight: 700; }
+        .modal-head h2 { font-size: 1.05rem; font-weight: 700; }
         .close-btn {
             background: none;
             border: none;
             color: var(--muted);
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             line-height: 1;
             cursor: pointer;
         }
         .close-btn:hover { color: var(--fg); }
+        .modal-card .entries { border-top: 1px solid var(--line); }
+        .modal-card .entries li:last-child .entry { border-bottom: none; }
+        .search-body { padding: 0 0.5rem 0.75rem; }
         #wikiSearchInput {
             width: 100%;
-            padding: 0.8rem 1rem;
+            padding: 0.65rem 0.85rem;
             font: inherit;
+            font-size: 0.95rem;
             color: var(--fg);
             background: var(--bg);
             border: 1px solid var(--line);
-            border-radius: 10px;
+            border-radius: 8px;
         }
         #wikiSearchInput::placeholder { color: var(--muted); }
         #searchResults {
-            margin-top: 1rem;
+            margin-top: 0.9rem;
             max-height: 15rem;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
+            font-size: 0.9rem;
         }
         #searchResults a { color: var(--fg); }
 
@@ -198,77 +212,122 @@
 </head>
 <body>
 
-    <nav class="top-links">
-        <a class="py-link" href="python.html">Python</a>
-        <a class="py-link" href="providence.pdf">LaTeX</a>
-    </nav>
-
     <button class="theme-switch" id="themeSwitch" type="button"
             role="switch" aria-checked="false" aria-label="Dark mode"></button>
 
-    <header>
-        <h1>Providence</h1>
-    </header>
+    <main>
+        <section aria-labelledby="cat-rptools">
+            <h2 class="category-title" id="cat-rptools">
+                <img src="pictures/rptools.png" alt="">
+                RP Tools
+            </h2>
+            <ul class="entries">
+                <li>
+                    <button class="entry" type="button" onclick="toggleModal('searchModal')">
+                        Search on Fandom
+                        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+                    </button>
+                </li>
+                <li>
+                    <button class="entry" type="button" onclick="toggleModal('parliamentModal')">
+                        Parliament Tool
+                        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+                    </button>
+                </li>
+            </ul>
+        </section>
 
-    <ul class="dashboard">
-        <li>
-            <button class="dash-btn" type="button" onclick="toggleSearchModal()">Search on Fandom</button>
-        </li>
-        <li>
-            <a class="dash-btn" href="parliament.html">Parliament Tool</a>
-        </li>
-        <li>
-            <a class="dash-btn" href="styleex.html">Style Extension</a>
-        </li>
-    </ul>
+        <section aria-labelledby="cat-projects">
+            <h2 class="category-title" id="cat-projects">
+                <img src="pictures/projects.png" alt="">
+                Projects
+            </h2>
+            <ul class="entries">
+                <li>
+                    <a class="entry" href="projects/styleex.html">
+                        Style Extension
+                        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+                    </a>
+                </li>
+            </ul>
+        </section>
+    </main>
 
-    <!-- Fandom search modal -->
-    <div id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+    <!-- Fandom search -->
+    <div class="modal" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
         <div class="modal-card">
             <div class="modal-head">
-                <h2 id="searchTitle">Providence Wiki Search</h2>
-                <button class="close-btn" type="button" onclick="toggleSearchModal()" aria-label="Close">&times;</button>
+                <h2 id="searchTitle">Wiki Search</h2>
+                <button class="close-btn" type="button" onclick="toggleModal('searchModal')" aria-label="Close">&times;</button>
             </div>
-
-            <input type="text"
-                   id="wikiSearchInput"
-                   placeholder="Search Providence Wiki..."
-                   oninput="runProvidenceSearch(this.value, 'searchResults')">
-
-            <div id="searchResults"></div>
+            <div class="search-body">
+                <input type="text" id="wikiSearchInput" placeholder="Search the wiki..."
+                       oninput="runProvidenceSearch(this.value, 'searchResults')">
+                <div id="searchResults"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Your existing fandom.js file -->
-    <script src="fandom.js"></script>
+    <!-- Parliament Tool menu -->
+    <div class="modal" id="parliamentModal" role="dialog" aria-modal="true" aria-labelledby="parliamentTitle">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2 id="parliamentTitle">What do you want to build?</h2>
+                <button class="close-btn" type="button" onclick="toggleModal('parliamentModal')" aria-label="Close">&times;</button>
+            </div>
+            <ul class="entries">
+                <li>
+                    <a class="entry with-icon" href="rptools/seats.html">
+                        <svg class="icon" viewBox="0 0 44 26" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true">
+                            <path d="M3 23 A19 19 0 0 1 41 23" stroke-dasharray="0 6.2"/>
+                            <path d="M10 23 A12 12 0 0 1 34 23" stroke-dasharray="0 5.4"/>
+                            <path d="M16.5 23 A5.5 5.5 0 0 1 27.5 23" stroke-dasharray="0 5"/>
+                        </svg>
+                        Seats
+                        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+                    </a>
+                </li>
+                <li>
+                    <a class="entry with-icon" href="rptools/votes.html">
+                        <svg class="icon" viewBox="0 0 28 28" fill="currentColor" aria-hidden="true">
+                            <rect x="3" y="14" width="5" height="11" rx="1"/>
+                            <rect x="11.5" y="5" width="5" height="20" rx="1"/>
+                            <rect x="20" y="10" width="5" height="15" rx="1"/>
+                        </svg>
+                        Votes
+                        <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="rptools/fandom.js"></script>
 
     <script>
-        // Fandom modal toggle
-        function toggleSearchModal() {
-            const modal = document.getElementById('searchModal');
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
             const opening = !modal.classList.contains('open');
             modal.classList.toggle('open', opening);
-            if (opening) document.getElementById('wikiSearchInput').focus();
+            if (opening && id === 'searchModal') document.getElementById('wikiSearchInput').focus();
         }
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && document.getElementById('searchModal').classList.contains('open')) {
-                toggleSearchModal();
-            }
+            if (e.key !== 'Escape') return;
+            document.querySelectorAll('.modal.open').forEach(m => toggleModal(m.id));
         });
-        document.getElementById('searchModal').addEventListener('click', e => {
-            if (e.target.id === 'searchModal') toggleSearchModal();
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('click', e => { if (e.target === m) toggleModal(m.id); });
         });
 
-        // Theme switch (light by default)
         const root = document.documentElement;
         const switchBtn = document.getElementById('themeSwitch');
         function setTheme(theme) {
             root.setAttribute('data-theme', theme);
             switchBtn.setAttribute('aria-checked', theme === 'dark');
-            try { localStorage.setItem('providence-theme', theme); } catch (e) {}
+            try { localStorage.setItem('site-theme', theme); } catch (e) {}
         }
         try {
-            const saved = localStorage.getItem('providence-theme');
+            const saved = localStorage.getItem('site-theme');
             if (saved) setTheme(saved);
         } catch (e) {}
         switchBtn.addEventListener('click', () => {
