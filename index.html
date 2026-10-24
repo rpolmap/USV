@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>Providence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
@@ -17,11 +17,11 @@
             --line: #e4e4de;
             --hover: rgba(20, 22, 26, 0.045);
             --overlay: rgba(20, 22, 26, 0.45);
-            --header-bg: #f3f4f6;
-            --header-border: #e5e7eb;
-            --header-text: #111827;
-            --nav-link: #4b5563;
-            --nav-link-hover: #111827;
+            --header-bg: #000000;
+            --header-border: #000000;
+            --header-text: #ffffff;
+            --nav-link: #d1d5db;
+            --nav-link-hover: #ffffff;
         }
         :root[data-theme="dark"] {
             --bg: #14161a;
@@ -31,11 +31,11 @@
             --line: #2a2e35;
             --hover: rgba(242, 242, 238, 0.06);
             --overlay: rgba(0, 0, 0, 0.65);
-            --header-bg: #1f2937;
-            --header-border: #374151;
-            --header-text: #f9fafb;
-            --nav-link: #9ca3af;
-            --nav-link-hover: #ffffff;
+            --header-bg: #ffffff;
+            --header-border: #ffffff;
+            --header-text: #000000;
+            --nav-link: #4b5563;
+            --nav-link-hover: #000000;
         }
 
         * { box-sizing: border-box; margin: 0; }
@@ -50,13 +50,28 @@
             align-items: center;
             padding: 0;
         }
-        .top-header { width: 100%; }
+        .top-header {
+            width: 100%;
+            padding: 1.5rem 2rem;
+        }
+        .top-header .brand {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1;
+        }
+        .top-header .nav-link {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-left: auto;
+            margin-right: 4.5rem; /* clears the theme switch */
+        }
 
         /* Theme switch */
         .theme-switch {
             position: fixed;
-            top: 0.9rem;
-            right: 1rem;
+            top: 1.9rem;
+            right: 2rem;
             width: 44px;
             height: 24px;
             border-radius: 999px;
@@ -231,7 +246,8 @@
             role="switch" aria-checked="false" aria-label="Dark mode"></button>
 
     <header class="top-header">
-        <a class="brand" href="index.html">Home</a>
+        <span class="brand">Providence</span>
+        <a class="nav-link" href="index.html">Home</a>
     </header>
 
     <main>
