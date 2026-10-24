@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link rel="stylesheet" href="../style.css">
 <style>
   :root {
     --bg: #f6f6f3; --fg: #14161a; --muted: #6b7078; --panel: #ffffff; --line: #dcdcd6;
@@ -24,28 +25,26 @@
   body {
     font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--fg);
     transition: background .25s, color .25s;
-    padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    padding: 0;
   }
+  #root { padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)); }
 
   .theme-switch {
-    position: fixed; top: calc(1rem + env(safe-area-inset-top, 0px)); right: 1rem; z-index: 40;
-    width: 52px; height: 28px; border-radius: 999px; border: 1px solid var(--line);
+    position: fixed; z-index: 40;
+    width: 44px; height: 24px; border-radius: 999px; border: 1px solid var(--line);
     background: var(--panel); cursor: pointer; padding: 0; transition: background .25s, border-color .25s;
   }
   .theme-switch::after {
-    content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
     border-radius: 50%; background: var(--fg); transition: transform .25s, background .25s;
   }
-  :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
-  .theme-switch:focus-visible, .btn:focus-visible, .field:focus-visible, .tab:focus-visible, .back:focus-visible, .card:focus-visible {
+  :root[data-theme="dark"] .theme-switch::after { transform: translateX(20px); }
+  .theme-switch:focus-visible, .btn:focus-visible, .field:focus-visible, .tab:focus-visible, .card:focus-visible {
     outline: 2px solid var(--fg); outline-offset: 3px;
   }
 
   .top { max-width: 80rem; margin: 2.5rem auto 1.5rem; }
   .top h1 { font-size: clamp(2.25rem, 7vw, 4rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-  .back { display: inline-block; margin-top: .75rem; color: var(--muted); font-size: .9rem; text-decoration: none; }
-  .back:hover { color: var(--fg); }
-  button.back { background: none; border: 0; font: inherit; font-size: .9rem; cursor: pointer; padding: 0; margin-right: 1rem; }
 
   .start { max-width: 56rem; margin: 0 auto; display: grid; gap: 1rem; }
   @media (min-width: 640px) { .start { grid-template-columns: 1fr 1fr; } }
@@ -117,6 +116,9 @@
 </style>
 </head>
 <body>
+<header class="top-header">
+        <a class="nav-link" href="../index.html">Home</a>
+    </header>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useMemo, useEffect } = React;
@@ -143,11 +145,11 @@ const rowsFor = N => Math.max(1, Math.min(20, Math.round(Math.sqrt(N) / 2.2)));
 
 function useTheme() {
   const [dark, setDark] = useState(() => {
-    try { return localStorage.getItem('providence-theme') === 'dark'; } catch (e) { return false; }
+    try { return localStorage.getItem('site-theme') === 'dark'; } catch (e) { return false; }
   });
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    try { localStorage.setItem('providence-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    try { localStorage.setItem('site-theme', dark ? 'dark' : 'light'); } catch (e) {}
   }, [dark]);
   return [dark, setDark];
 }
@@ -169,8 +171,6 @@ function Header({ title }) {
   return (
     <div className="top">
       <h1>{title}</h1>
-      <a className="back" href="parliament.html" style={{ marginRight: '1rem' }}>&larr; Change mode</a>
-      <a className="back" href="index.html">Back to Providence</a>
     </div>
   );
 }
