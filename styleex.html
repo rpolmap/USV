@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiklekka's Style Extension</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f6f6f3;
+            --fg: #14161a;
+            --muted: #6b7078;
+            --panel: #ffffff;
+            --line: #dcdcd6;
+            --btn-bg: #14161a;      /* buttons: opposite of page background */
+            --btn-fg: #f6f6f3;
+            --overlay: rgba(20, 22, 26, 0.45);
+            --note-bg: #f0f0eb;
+        }
+        :root[data-theme="dark"] {
+            --bg: #14161a;
+            --fg: #f2f2ee;
+            --muted: #9aa0a8;
+            --panel: #1c1f25;
+            --line: #2c3037;
+            --btn-bg: #f2f2ee;
+            --btn-fg: #14161a;
+            --overlay: rgba(0, 0, 0, 0.65);
+            --note-bg: #242830;
+        }
+
+        * { box-sizing: border-box; margin: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            transition: background .25s, color .25s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 1rem 4rem 1rem;
+        }
+
+        /* Top-left links */
+        .top-links {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 10;
+        }
+        .py-link {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color .25s;
+        }
+        .py-link:hover { color: var(--fg); }
+        .py-link:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
+        /* Theme switch */
+        .theme-switch {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            width: 52px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            cursor: pointer;
+            padding: 0;
+            z-index: 10;
+            transition: background .25s, border-color .25s;
+        }
+        .theme-switch::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--fg);
+            transition: transform .25s, background .25s;
+        }
+        :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
+        .theme-switch:focus-visible,
+        .dash-btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
+        /* Title */
+        header { margin-top: clamp(4rem, 10vh, 7rem); text-align: center; }
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+        }
+        .subtitle {
+            margin-top: 0.75rem;
+            color: var(--muted);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        /* Container & Cards */
+        .container {
+            width: 100%;
+            max-width: 36rem;
+            margin-top: clamp(2rem, 5vh, 3.5rem);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .section-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 1.5rem;
+            transition: background .25s, border-color .25s;
+        }
+
+        .section-card h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .section-card p {
+            color: var(--muted);
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        /* Steps */
+        .steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .step-item {
+            border-top: 1px solid var(--line);
+            padding-top: 1.25rem;
+        }
+        .step-item:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .step-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-desc {
+            color: var(--fg);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 0.75rem;
+        }
+
+        .step-desc code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            background: var(--bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+            font-size: 0.85em;
+        }
+
+        /* Links & Buttons inside content */
+        .ext-link {
+            color: var(--fg);
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .dash-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            font: inherit;
+            font-weight: 600;
+            padding: 1.0rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            background: var(--btn-bg);
+            color: var(--btn-fg);
+            cursor: pointer;
+            transition: background .25s, color .25s, transform .15s;
+            margin-top: 0.5rem;
+        }
+        .dash-btn:hover { transform: translateY(-2px); }
+        .dash-btn:active { transform: translateY(0); }
+
+        /* Note box */
+        .note-box {
+            background: var(--note-bg);
+            border: 1px dashed var(--line);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--fg);
+            margin-top: 0.75rem;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="top-links">
+        <a class="py-link" href="index.html">&larr; Return to Providence</a>
+    </nav>
+
+    <button class="theme-switch" id="themeSwitch" type="button"
+            role="switch" aria-checked="false" aria-label="Dark mode"></button>
+
+    <header>
+        <h1>Wiklekka's Style Extension</h1>
+        <p class="subtitle">Step by Step guide to setting up the Browser Extension</p>
+    </header>
+
+    <main class="container">
+
+        <!-- Demo/Browser Section -->
+        <section class="section-card">
+            <h2>Demo / Browser Version</h2>
+            <p>Coming soon</p>
+        </section>
+
+        <!-- Full Download & Setup Guide Section -->
+        <section class="section-card">
+            <h2>Full Download &amp; Setup</h2>
+            <p style="margin-bottom: 1rem;"><strong>Requirements:</strong> Windows, Linux or Android Device</p>
+
+            <div class="steps-list">
+                
+                <!-- Step 1 -->
+                <article class="step-item">
+                    <div class="step-title">Step 1</div>
+                    <div class="step-desc">
+                        <strong>On PC:</strong> Download any Browser running on Chromium supporting Extensions.<br>
+                        <strong>On Android:</strong> Download the arm64 Kiwi Browser.
+                    </div>
+                    <a class="dash-btn" href="kiwi-browser-arm64.apk" download>Kiwi Browser download</a>
+                </article>
+
+                <!-- Step 2 -->
+                <article class="step-item">
+                    <div class="step-title">Step 2</div>
+                    <div class="step-desc">
+                        Download the Wiklekka's Style Extension ZIP file.
+                    </div>
+                    <a class="dash-btn" href="wiklekka-style-extension.zip" download>Style Extension download</a>
+                </article>
+
+                <!-- Step 3 -->
+                <article class="step-item">
+                    <div class="step-title">Step 3</div>
+                    <div class="step-desc">
+                        Open the Kiwi Browser (or any Chromium based browser on PC) and enter <code>chrome://extensions</code> in the search bar.
+                    </div>
+                </article>
+
+                <!-- Step 4 -->
+                <article class="step-item">
+                    <div class="step-title">Step 4</div>
+                    <div class="step-desc">
+                        Click <strong>"+ (from .zip/.crx/.user.js)"</strong> and select the downloaded ZIP file.
+                    </div>
+                </article>
+
+                <!-- Step 5 -->
+                <article class="step-item">
+                    <div class="step-title">Step 5</div>
+                    <div class="step-desc">
+                        Open the <a class="ext-link" href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Groq API keys</a> website on any browser (doesn't have to be Kiwi) and get a free API key.
+                    </div>
+                    <div class="note-box">
+                        &excl; Note your API key somewhere &excl;
+                    </div>
+                </article>
+
+                <!-- Step 6 -->
+                <article class="step-item">
+                    <div class="step-title">Step 6</div>
+                    <div class="step-desc">
+                        Open the website you want to edit on Kiwi Browser and click on the 3 dots on the bottom right and select <strong>"AI Web Customizer"</strong>.
+                    </div>
+                    <div class="step-desc">
+                        Enter your API key there and follow the instructions. Your API key gets saved in the browser so that you only have to enter it once.
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Theme switch (light by default)
+        const root = document.documentElement;
+        const switchBtn = document.getElementById('themeSwitch');
+        
+        function setTheme(theme) {
+            root.setAttribute('data-theme', theme);
+            switchBtn.setAttribute('aria-checked', theme === 'dark');
+            try { localStorage.setItem('providence-theme', theme); } catch (e) {}
+        }
+
+        try {
+            const saved = localStorage.getItem('providence-theme');
+            if (saved) setTheme(saved);
+        } catch (e) {}
+
+        switchBtn.addEventListener('click', () => {
+            setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+    </script>
+
+</body>
+</html>
