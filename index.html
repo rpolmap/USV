@@ -92,7 +92,9 @@
             width: 1.5rem;
             height: 1.5rem;
             object-fit: contain;
+            transition: filter .25s;
         }
+        :root[data-theme="dark"] .category-title img { filter: invert(1); }
 
         /* Entries: plain rows, no button chrome */
         .entries {
