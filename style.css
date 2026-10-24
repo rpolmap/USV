@@ -1,0 +1,72 @@
+/* Import a modern, sleek font (Inter) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+:root {
+  /* Default / Light Mode Colors */
+  --header-bg: #f3f4f6;          /* Light gray background */
+  --header-border: #e5e7eb;      /* Subtle bottom border */
+  --header-text: #111827;        /* Dark slate text */
+  --nav-link: #4b5563;           /* Muted text for links */
+  --nav-link-hover: #111827;     /* Hover state text color */
+}
+
+/* Dark Mode Color Overrides (Triggers when OS/Browser is in Dark Mode) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --header-bg: #1f2937;        /* Dark gray background */
+    --header-border: #374151;    /* Subtle dark border */
+    --header-text: #f9fafb;      /* Bright white text */
+    --nav-link: #9ca3af;         /* Muted gray for links */
+    --nav-link-hover: #ffffff;   /* Hover state text color */
+  }
+}
+
+/* Optional: If you use a `.dark` class on the <html> or <body> tag for manual toggling */
+html.dark {
+  --header-bg: #1f2937;
+  --header-border: #374151;
+  --header-text: #f9fafb;
+  --nav-link: #9ca3af;
+  --nav-link-hover: #ffffff;
+}
+
+/* Global Reset for Top Bar Alignment */
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sleek Top Navigation Bar */
+.top-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1.5rem;
+  padding: 0.85rem 1.5rem;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Brand Title ("Providence") */
+.top-header .brand {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--header-text);
+  text-decoration: none;
+}
+
+/* Main Menu Link */
+.top-header .nav-link {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--nav-link);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.top-header .nav-link:hover {
+  color: var(--nav-link-hover);
+}
