@@ -17,11 +17,6 @@
             --line: #e4e4de;
             --hover: rgba(20, 22, 26, 0.045);
             --overlay: rgba(20, 22, 26, 0.45);
-            --header-bg: #000000;
-            --header-border: #000000;
-            --header-text: #ffffff;
-            --nav-link: #d1d5db;
-            --nav-link-hover: #ffffff;
         }
         :root[data-theme="dark"] {
             --bg: #14161a;
@@ -31,11 +26,6 @@
             --line: #2a2e35;
             --hover: rgba(242, 242, 238, 0.06);
             --overlay: rgba(0, 0, 0, 0.65);
-            --header-bg: #ffffff;
-            --header-border: #ffffff;
-            --header-text: #000000;
-            --nav-link: #4b5563;
-            --nav-link-hover: #000000;
         }
 
         * { box-sizing: border-box; margin: 0; }
@@ -50,28 +40,11 @@
             align-items: center;
             padding: 0;
         }
-        .top-header {
-            width: 100%;
-            padding: 1.5rem 2rem;
-        }
-        .top-header .brand {
-            font-size: 2.25rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            line-height: 1;
-        }
-        .top-header .nav-link {
-            font-size: 1rem;
-            font-weight: 500;
-            margin-left: auto;
-            margin-right: 4.5rem; /* clears the theme switch */
-        }
+
 
         /* Theme switch */
         .theme-switch {
             position: fixed;
-            top: 1.9rem;
-            right: 2rem;
             width: 44px;
             height: 24px;
             border-radius: 999px;
@@ -246,7 +219,6 @@
             role="switch" aria-checked="false" aria-label="Dark mode"></button>
 
     <header class="top-header">
-        <span class="brand">Providence</span>
         <a class="nav-link" href="index.html">Home</a>
     </header>
 
