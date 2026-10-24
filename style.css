@@ -1,67 +1,79 @@
 /* Import a modern, sleek font (Inter) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;800&display=swap');
 
+/* ---------- Colors ---------- */
 :root {
-  /* Default / Light Mode Colors */
-  --header-bg: #f3f4f6;          /* Light gray background */
-  --header-border: #e5e7eb;      /* Subtle bottom border */
-  --header-text: #111827;        /* Dark slate text */
-  --nav-link: #4b5563;           /* Muted text for links */
-  --nav-link-hover: #111827;     /* Hover state text color */
+  /* Light mode: white bar, black text */
+  --header-bg: #ffffff;
+  --header-border: #e5e7eb;
+  --header-text: #000000;
+  --nav-link: #4b5563;
+  --nav-link-hover: #000000;
 }
 
-/* Dark Mode Color Overrides (Triggers when OS/Browser is in Dark Mode) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --header-bg: #1f2937;        /* Dark gray background */
-    --header-border: #374151;    /* Subtle dark border */
-    --header-text: #f9fafb;      /* Bright white text */
-    --nav-link: #9ca3af;         /* Muted gray for links */
-    --nav-link-hover: #ffffff;   /* Hover state text color */
-  }
-}
-
-/* Optional: If you use a `.dark` class on the <html> or <body> tag for manual toggling */
+/* Dark mode: black bar, white text.
+   Follows the site's theme switch (data-theme / .dark),
+   and falls back to the OS setting if neither is set. */
+:root[data-theme="dark"],
 html.dark {
-  --header-bg: #1f2937;
-  --header-border: #374151;
-  --header-text: #f9fafb;
+  --header-bg: #000000;
+  --header-border: #2a2e35;
+  --header-text: #ffffff;
   --nav-link: #9ca3af;
   --nav-link-hover: #ffffff;
 }
 
-/* Global Reset for Top Bar Alignment */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]):not(.light) {
+    --header-bg: #000000;
+    --header-border: #2a2e35;
+    --header-text: #ffffff;
+    --nav-link: #9ca3af;
+    --nav-link-hover: #ffffff;
+  }
+}
+
+/* ---------- Base ---------- */
 body {
   margin: 0;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Sleek Top Navigation Bar */
+/* ---------- Top bar ----------
+   index.html only needs:
+   <header class="top-header"><a class="nav-link" href="index.html">Home</a></header>
+   The big title is added from here. */
 .top-header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 1.5rem;
-  padding: 0.85rem 1.5rem;
+  width: 100%;
+  height: 5.25rem;
+  box-sizing: border-box;
+  padding: 0 2rem;
   background-color: var(--header-bg);
   border-bottom: 1px solid var(--header-border);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Brand Title ("Providence") */
-.top-header .brand {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+/* Big title text (not a link) */
+.top-header::before {
+  content: "Providence";
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
   color: var(--header-text);
-  text-decoration: none;
+  transition: color 0.3s ease;
 }
 
-/* Main Menu Link */
+/* Smaller Home link on the right, leaving room for the theme switch */
 .top-header .nav-link {
-  font-size: 0.9rem;
-  font-weight: 400;
+  margin-left: auto;
+  margin-right: 4.5rem;
+  font-size: 1rem;
+  font-weight: 500;
   color: var(--nav-link);
   text-decoration: none;
   transition: color 0.2s ease;
@@ -69,4 +81,10 @@ body {
 
 .top-header .nav-link:hover {
   color: var(--nav-link-hover);
+}
+
+/* Theme switch position: vertically centered in the bar, far right */
+.theme-switch {
+  top: calc((5.25rem - 24px) / 2);
+  right: 2rem;
 }
