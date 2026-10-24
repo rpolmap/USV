@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
     <style>
         :root {
             --bg: #f6f6f3;
@@ -41,35 +42,15 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 0 1rem 4rem 1rem;
+            padding: 0 0 4rem 0;
         }
-
-        /* Top-left links */
-        .top-links {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            display: flex;
-            gap: 1rem;
-            z-index: 10;
-        }
-        .py-link {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 0.75rem;
-            color: var(--muted);
-            text-decoration: none;
-            transition: color .25s;
-        }
-        .py-link:hover { color: var(--fg); }
-        .py-link:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+        header:not(.top-header), .container { padding-left: 1rem; padding-right: 1rem; }
 
         /* Theme switch */
         .theme-switch {
             position: fixed;
-            top: 1rem;
-            right: 1rem;
-            width: 52px;
-            height: 28px;
+            width: 44px;
+            height: 24px;
             border-radius: 999px;
             border: 1px solid var(--line);
             background: var(--panel);
@@ -83,18 +64,18 @@
             position: absolute;
             top: 3px;
             left: 3px;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: var(--fg);
             transition: transform .25s, background .25s;
         }
-        :root[data-theme="dark"] .theme-switch::after { transform: translateX(24px); }
+        :root[data-theme="dark"] .theme-switch::after { transform: translateX(20px); }
         .theme-switch:focus-visible,
         .dash-btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
 
         /* Title */
-        header { margin-top: clamp(4rem, 10vh, 7rem); text-align: center; }
+        header:not(.top-header) { margin-top: clamp(4rem, 10vh, 7rem); text-align: center; }
         h1 {
             font-size: clamp(2.5rem, 8vw, 4.5rem);
             font-weight: 800;
@@ -227,9 +208,9 @@
 </head>
 <body>
 
-    <nav class="top-links">
-        <a class="py-link" href="index.html">&larr; Return to Providence</a>
-    </nav>
+    <header class="top-header">
+        <a class="nav-link" href="../index.html">Home</a>
+    </header>
 
     <button class="theme-switch" id="themeSwitch" type="button"
             role="switch" aria-checked="false" aria-label="Dark mode"></button>
@@ -316,11 +297,11 @@
         function setTheme(theme) {
             root.setAttribute('data-theme', theme);
             switchBtn.setAttribute('aria-checked', theme === 'dark');
-            try { localStorage.setItem('providence-theme', theme); } catch (e) {}
+            try { localStorage.setItem('site-theme', theme); } catch (e) {}
         }
 
         try {
-            const saved = localStorage.getItem('providence-theme');
+            const saved = localStorage.getItem('site-theme');
             if (saved) setTheme(saved);
         } catch (e) {}
 
