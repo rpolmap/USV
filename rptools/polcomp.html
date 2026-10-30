@@ -86,7 +86,6 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-const MODEL = 'llama-3.1-8b-instant'; // Groq's most efficient (smallest, fastest, cheapest) production model
 const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
 let _id = 0;
 const uid = () => 'p' + (++_id);
@@ -120,28 +119,50 @@ function Slider({ label, v, set }) {
   );
 }
 
-async function askGroq(key, query) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-    body: JSON.stringify({
-      model: MODEL, temperature: 0.2, max_tokens: 300,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: 'You place ideologies, thinkers, parties and positions on a political compass. Reply ONLY with JSON: {"title": short name, "x": number from -10 (economic left) to 10 (economic right), "y": number from -10 (libertarian) to 10 (authoritarian), "desc": 1-2 neutral sentences explaining the placement}.' },
-        { role: 'user', content: query },
-      ],
-    }),
+// Models that are not text chat models, or are too heavy to count as "efficient"
+const SKIP = /whisper|tts|playai|orpheus|guard|embed|compound|safeguard/i;
+const sizeOf = id => { const m = id.match(/(\d+(?:\.\d+)?)b/i); return m ? parseFloat(m[1]) : Infinity; };
+const httpError = st => new Error(st === 401 ? 'Invalid API key.' : st === 429 ? 'Rate limit reached. Try again in a moment.' : 'Groq request failed (' + st + ').');
+
+// Ask Groq which models this key can use, then rank them: smallest parameter count first ("instant" wins ties)
+async function rankedModels(key) {
+  const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: 'Bearer ' + key } });
+  if (!res.ok) throw httpError(res.status);
+  const { data } = await res.json();
+  const list = data.filter(m => m.active !== false && !SKIP.test(m.id)).sort((a, b) => {
+    const sa = sizeOf(a.id), sb = sizeOf(b.id);
+    if (sa !== sb) return sa < sb ? -1 : 1;
+    return (/instant/i.test(b.id) ? 1 : 0) - (/instant/i.test(a.id) ? 1 : 0);
   });
-  if (!res.ok) {
-    if (res.status === 401) throw new Error('Invalid API key.');
-    if (res.status === 429) throw new Error('Rate limit reached. Try again in a moment.');
-    throw new Error('Groq request failed (' + res.status + ').');
+  if (!list.length) throw new Error('No usable chat model found for this key.');
+  return list.map(m => m.id);
+}
+
+async function askGroq(key, query) {
+  const models = await rankedModels(key);
+  let last = null;
+  for (const model of models) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+      body: JSON.stringify({
+        model, temperature: 0.2, max_tokens: 400,
+        messages: [
+          { role: 'system', content: 'You place ideologies, thinkers, parties and positions on a political compass. Reply ONLY with JSON: {"title": short name, "x": number from -10 (economic left) to 10 (economic right), "y": number from -10 (libertarian) to 10 (authoritarian), "desc": 1-2 neutral sentences explaining the placement}.' },
+          { role: 'user', content: query },
+        ],
+      }),
+    });
+    if (res.status === 401 || res.status === 429) throw httpError(res.status);
+    if (!res.ok) { last = httpError(res.status); continue; } // model unavailable: try the next most efficient one
+    try {
+      const data = await res.json();
+      const j = JSON.parse(data.choices[0].message.content.match(/\{[\s\S]*\}/)[0]);
+      if (typeof j.x !== 'number' || typeof j.y !== 'number') throw new Error();
+      return { model, pin: { title: String(j.title || query).slice(0, 40), x: clamp(j.x), y: clamp(j.y), desc: String(j.desc || '') } };
+    } catch (e) { last = new Error('Unexpected AI response.'); }
   }
-  const data = await res.json();
-  const j = JSON.parse(data.choices[0].message.content);
-  if (typeof j.x !== 'number' || typeof j.y !== 'number') throw new Error('Unexpected AI response.');
-  return { title: String(j.title || query).slice(0, 40), x: clamp(j.x), y: clamp(j.y), desc: String(j.desc || '') };
+  throw last || new Error('No model responded.');
 }
 
 function PolCompApp() {
@@ -152,6 +173,7 @@ function PolCompApp() {
   const [key, setKey] = useState(() => { try { return localStorage.getItem('groq-key') || ''; } catch (e) { return ''; } });
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
+  const [usedModel, setUsedModel] = useState('');
   const [error, setError] = useState('');
   const [label, setLabel] = useState('');
   const [mx, setMx] = useState(0);
@@ -170,7 +192,7 @@ function PolCompApp() {
     e.preventDefault();
     if (!key.trim()) { setError('Enter your Groq API key first.'); return; }
     setBusy(true); setError('');
-    try { addPin(await askGroq(key.trim(), query.trim())); setQuery(''); }
+    try { const r = await askGroq(key.trim(), query.trim()); addPin(r.pin); setUsedModel(r.model); setQuery(''); }
     catch (err) { setError(err.message || 'Something went wrong.'); }
     setBusy(false);
   };
@@ -212,7 +234,7 @@ function PolCompApp() {
                 <button className="btn block" type="submit" disabled={busy}>{busy ? 'Analyzing…' : 'Plot with AI'}</button>
               </form>
               {error && <div className="err">{error}</div>}
-              <p className="hint">Model: {MODEL}, chosen automatically as Groq's most efficient option.</p>
+              <p className="hint">{usedModel ? 'Model used: ' + usedModel + ' (picked automatically).' : 'The most efficient model on your Groq account is detected and used automatically.'}</p>
             </div>
           ) : (
             <div className="controls">
