@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Political Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<link rel="stylesheet" href="../style.css">
+<style>
+  :root {
+    --bg: #f6f6f3; --fg: #14161a; --muted: #6b7078; --panel: #ffffff; --line: #dcdcd6;
+    --btn-bg: #14161a; --btn-fg: #f6f6f3;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a; --fg: #f2f2ee; --muted: #9aa0a8; --panel: #1c1f25; --line: #2c3037;
+    --btn-bg: #f2f2ee; --btn-fg: #14161a;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--fg); transition: background .25s, color .25s; padding: 0; }
+  #root { padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)); }
+
+  .theme-switch { position: fixed; z-index: 40; width: 44px; height: 24px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; padding: 0; transition: background .25s, border-color .25s; }
+  .theme-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--fg); transition: transform .25s, background .25s; }
+  :root[data-theme="dark"] .theme-switch::after { transform: translateX(20px); }
+  .theme-switch:focus-visible, .btn:focus-visible, .field:focus-visible, .tab:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
+  .top { max-width: 80rem; margin: 2.5rem auto 1.5rem; }
+  .top h1 { font-size: clamp(2.25rem, 7vw, 4rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+
+  .layout { max-width: 80rem; margin: 0 auto; display: grid; gap: 1rem; }
+  @media (min-width: 768px) { .layout { grid-template-columns: 22rem 1fr; align-items: start; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: .75rem; transition: background .25s, border-color .25s; }
+  aside.panel { display: flex; flex-direction: column; gap: .75rem; }
+  @media (min-width: 768px) { aside.panel { max-height: calc(100vh - 2rem); overflow-y: auto; position: sticky; top: 1rem; } }
+  main.panel { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+  .field { width: 100%; padding: .6rem .8rem; font: inherit; font-size: .9rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+  .btn { font: inherit; font-weight: 600; font-size: .9rem; padding: .7rem 1rem; border: none; border-radius: 10px; background: var(--btn-bg); color: var(--btn-fg); cursor: pointer; transition: background .25s, color .25s, transform .15s; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .5; cursor: default; transform: none; }
+  .btn.block { width: 100%; }
+  .btn.ghost { background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
+  .tabs { display: flex; gap: .5rem; }
+  .tab { flex: 1; }
+  .controls { display: flex; flex-direction: column; gap: .9rem; padding: .25rem; }
+  .hint { font-size: .8rem; line-height: 1.4; color: var(--muted); }
+  .hint a { color: var(--fg); font-weight: 600; }
+  .err { font-size: .85rem; font-weight: 600; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: .6rem .8rem; }
+  .muted { color: var(--muted); }
+  .slider { display: block; font-size: .875rem; }
+  .slider .lbl { display: flex; justify-content: space-between; margin-bottom: .25rem; }
+  .slider input { width: 100%; accent-color: var(--fg); }
+  .row { display: flex; align-items: center; gap: .5rem; font-size: .875rem; }
+  .pin { border: 1px solid var(--line); border-radius: 10px; padding: .55rem .7rem; cursor: pointer; display: flex; align-items: center; gap: .6rem; font-size: .875rem; background: transparent; color: var(--fg); font-family: inherit; text-align: left; width: 100%; }
+  .pin.sel { border-color: var(--fg); }
+  .pin span.n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .del { background: none; border: none; color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer; padding: 0 .25rem; }
+  .del:hover { color: var(--fg); }
+  .dot { display: inline-block; width: .75rem; height: .75rem; border-radius: 50%; flex: none; }
+  .list { display: flex; flex-direction: column; gap: .5rem; }
+
+  .chart { display: flex; align-items: center; justify-content: center; }
+  .chart svg { width: 100%; max-width: 40rem; max-height: 70vh; cursor: crosshair; }
+  .chart svg text { font-family: inherit; }
+  .t { fill: var(--fg); } .tm { fill: var(--muted); }
+  .gl { stroke: var(--line); stroke-width: 1; }
+  .ax { stroke: var(--fg); stroke-width: 1.5; opacity: .7; }
+  footer { border-top: 1px solid var(--line); padding-top: .9rem; font-size: .875rem; display: flex; flex-direction: column; gap: .5rem; }
+  footer h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: .5rem; }
+  footer p { line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top-header">
+  <a class="nav-link" href="../index.html">Home</a>
+</header>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const MODEL = 'llama-3.1-8b-instant'; // Groq's most efficient (smallest, fastest, cheapest) production model
+const PALETTE = ['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0891b2','#db2777','#65a30d'];
+let _id = 0;
+const uid = () => 'p' + (++_id);
+const clamp = v => Math.max(-10, Math.min(10, Math.round(v * 10) / 10));
+const quad = (x, y) => (Math.abs(x) <= 1 && Math.abs(y) <= 1) ? 'Centrist' : (y >= 0 ? 'Authoritarian ' : 'Libertarian ') + (x >= 0 ? 'Right' : 'Left');
+
+const START = [
+  ['Neoliberalism', 4.5, 1.5, 'Free markets, globalization and deregulation alongside moderate state oversight.'],
+  ['Social Democracy', -4, -2, 'Democratic politics with a strong welfare state and regulated markets.'],
+  ['Anarcho-Capitalism', 9, -8.5, 'Abolish the state in favor of self-ownership, private property and free markets.'],
+  ['Classical Marxism', -8.5, 6, 'Class struggle, abolition of private property and a state-led transition to communism.'],
+].map(([title, x, y, desc], i) => ({ id: uid(), title, x, y, desc, color: PALETTE[i] }));
+
+function useTheme() {
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem('site-theme') === 'dark'; } catch (e) { return false; } });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    try { localStorage.setItem('site-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }, [dark]);
+  return [dark, setDark];
+}
+function ThemeSwitch({ dark, setDark }) {
+  return <button className="theme-switch" type="button" role="switch" aria-checked={dark} aria-label="Dark mode" onClick={() => setDark(d => !d)}></button>;
+}
+function Slider({ label, v, set }) {
+  return (
+    <label className="slider">
+      <div className="lbl"><span>{label}</span><span className="muted">{v.toFixed(1)}</span></div>
+      <input type="range" min={-10} max={10} step={0.1} value={v} onChange={e => set(+e.target.value)} />
+    </label>
+  );
+}
+
+async function askGroq(key, query) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    body: JSON.stringify({
+      model: MODEL, temperature: 0.2, max_tokens: 300,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: 'You place ideologies, thinkers, parties and positions on a political compass. Reply ONLY with JSON: {"title": short name, "x": number from -10 (economic left) to 10 (economic right), "y": number from -10 (libertarian) to 10 (authoritarian), "desc": 1-2 neutral sentences explaining the placement}.' },
+        { role: 'user', content: query },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('Invalid API key.');
+    if (res.status === 429) throw new Error('Rate limit reached. Try again in a moment.');
+    throw new Error('Groq request failed (' + res.status + ').');
+  }
+  const data = await res.json();
+  const j = JSON.parse(data.choices[0].message.content);
+  if (typeof j.x !== 'number' || typeof j.y !== 'number') throw new Error('Unexpected AI response.');
+  return { title: String(j.title || query).slice(0, 40), x: clamp(j.x), y: clamp(j.y), desc: String(j.desc || '') };
+}
+
+function PolCompApp() {
+  const [dark, setDark] = useTheme();
+  const [pins, setPins] = useState(START);
+  const [sel, setSel] = useState(START[0].id);
+  const [tab, setTab] = useState('ai');
+  const [key, setKey] = useState(() => { try { return localStorage.getItem('groq-key') || ''; } catch (e) { return ''; } });
+  const [query, setQuery] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [label, setLabel] = useState('');
+  const [mx, setMx] = useState(0);
+  const [my, setMy] = useState(0);
+  const svgRef = useRef(null);
+
+  useEffect(() => { try { localStorage.setItem('groq-key', key); } catch (e) {} }, [key]);
+
+  const addPin = (p) => {
+    const pin = { id: uid(), color: PALETTE[pins.length % PALETTE.length], desc: '', ...p };
+    setPins(ps => [...ps, pin]); setSel(pin.id);
+  };
+  const remove = id => { setPins(ps => ps.filter(p => p.id !== id)); if (sel === id) setSel(null); };
+
+  const analyze = async (e) => {
+    e.preventDefault();
+    if (!key.trim()) { setError('Enter your Groq API key first.'); return; }
+    setBusy(true); setError('');
+    try { addPin(await askGroq(key.trim(), query.trim())); setQuery(''); }
+    catch (err) { setError(err.message || 'Something went wrong.'); }
+    setBusy(false);
+  };
+
+  const onChartClick = (e) => {
+    const r = svgRef.current.getBoundingClientRect();
+    const sx = (e.clientX - r.left) / r.width * 440, sy = (e.clientY - r.top) / r.height * 440;
+    if (sx < 20 || sx > 420 || sy < 20 || sy > 420) return;
+    const x = clamp((sx - 20) / 20 - 10), y = clamp(10 - (sy - 20) / 20);
+    addPin({ title: 'Pin ' + (pins.length + 1), x, y, desc: 'Custom position placed by hand.' });
+  };
+
+  const px = x => 20 + (x + 10) * 20, py = y => 20 + (10 - y) * 20;
+  const cur = pins.find(p => p.id === sel);
+
+  return (
+    <>
+      <ThemeSwitch dark={dark} setDark={setDark} />
+      <div className="top"><h1>Political Compass</h1></div>
+
+      <div className="layout">
+        <aside className="panel">
+          <div className="tabs">
+            {[['ai', 'AI Finder'], ['pins', 'Pins']].map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setTab(k)} className={'btn tab' + (tab === k ? '' : ' ghost')}>{l}</button>
+            ))}
+          </div>
+
+          {tab === 'ai' ? (
+            <div className="controls">
+              <div>
+                <input className="field" type="password" autoComplete="off" placeholder="Groq API key (gsk_...)" value={key} onChange={e => setKey(e.target.value)} aria-label="Groq API key" />
+                <p className="hint" style={{ marginTop: '.4rem' }}>
+                  Get a free key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">console.groq.com/keys</a>. It stays in your browser and is only sent to Groq.
+                </p>
+              </div>
+              <form onSubmit={analyze} className="controls" style={{ padding: 0 }}>
+                <input className="field" placeholder="e.g. Technocracy, Libertarian Socialism…" value={query} onChange={e => setQuery(e.target.value)} required aria-label="Ideology" />
+                <button className="btn block" type="submit" disabled={busy}>{busy ? 'Analyzing…' : 'Plot with AI'}</button>
+              </form>
+              {error && <div className="err">{error}</div>}
+              <p className="hint">Model: {MODEL}, chosen automatically as Groq's most efficient option.</p>
+            </div>
+          ) : (
+            <div className="controls">
+              <input className="field" placeholder="Label (optional)" value={label} onChange={e => setLabel(e.target.value)} />
+              <Slider label="Economic (Left ↔ Right)" v={mx} set={setMx} />
+              <Slider label="Social (Libertarian ↔ Authoritarian)" v={my} set={setMy} />
+              <button className="btn block" type="button" onClick={() => { addPin({ title: label.trim() || 'Pin ' + (pins.length + 1), x: mx, y: my, desc: 'Custom position entered manually.' }); setLabel(''); }}>+ Add pin</button>
+              <div className="list">
+                {pins.map(p => (
+                  <button key={p.id} type="button" className={'pin' + (p.id === sel ? ' sel' : '')} onClick={() => setSel(p.id)}>
+                    <i className="dot" style={{ background: p.color }}></i>
+                    <span className="n">{p.title}</span>
+                    <span className="muted">{p.x}, {p.y}</span>
+                    <span className="del" role="button" aria-label="Delete pin" onClick={e => { e.stopPropagation(); remove(p.id); }}>&times;</span>
+                  </button>
+                ))}
+                {pins.length > 0 && <button type="button" className="btn ghost block" onClick={() => { setPins([]); setSel(null); }}>Clear all</button>}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        <main className="panel">
+          <div className="chart">
+            <svg ref={svgRef} viewBox="0 0 440 440" onClick={onChartClick}>
+              <rect x="20" y="20" width="200" height="200" fill="#e11d48" opacity=".16" />
+              <rect x="220" y="20" width="200" height="200" fill="#2563eb" opacity=".16" />
+              <rect x="20" y="220" width="200" height="200" fill="#16a34a" opacity=".16" />
+              <rect x="220" y="220" width="200" height="200" fill="#f59e0b" opacity=".16" />
+              {[-8,-6,-4,-2,2,4,6,8].map(i => (
+                <g key={i}><line className="gl" x1={px(i)} y1="20" x2={px(i)} y2="420" /><line className="gl" x1="20" y1={py(i)} x2="420" y2={py(i)} /></g>
+              ))}
+              <line className="ax" x1="20" y1="220" x2="420" y2="220" />
+              <line className="ax" x1="220" y1="20" x2="220" y2="420" />
+              <rect x="20" y="20" width="400" height="400" fill="none" className="gl" />
+              <g className="tm" fontSize="9" fontWeight="600" textAnchor="middle" letterSpacing=".5">
+                <text className="tm" x="120" y="36">AUTH LEFT</text><text className="tm" x="320" y="36">AUTH RIGHT</text>
+                <text className="tm" x="120" y="412">LIB LEFT</text><text className="tm" x="320" y="412">LIB RIGHT</text>
+              </g>
+              <g fontSize="10" fontWeight="600" textAnchor="middle">
+                <text className="t" x="220" y="12">Authoritarian</text>
+                <text className="t" x="220" y="436">Libertarian</text>
+                <text className="t" x="10" y="223" transform="rotate(-90 10 220)">Left</text>
+                <text className="t" x="430" y="223" transform="rotate(90 430 220)">Right</text>
+              </g>
+              {pins.map(p => {
+                const s = p.id === sel;
+                return (
+                  <g key={p.id} style={{ cursor: 'pointer' }} onClick={e => { e.stopPropagation(); setSel(p.id); }}>
+                    {s && <circle cx={px(p.x)} cy={py(p.y)} r="11" fill={p.color} opacity=".25" />}
+                    <circle cx={px(p.x)} cy={py(p.y)} r={s ? 6 : 4.5} fill={p.color} stroke="var(--panel)" strokeWidth="1.5" />
+                    <text className="t" x={px(p.x)} y={py(p.y) + (py(p.y) < 50 ? 16 : -10)} textAnchor="middle" fontSize="10" fontWeight={s ? 800 : 600}
+                      style={{ paintOrder: 'stroke', stroke: 'var(--panel)', strokeWidth: 3 }}>{p.title}</text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+          <footer>
+            {cur ? (
+              <>
+                <h3><i className="dot" style={{ background: cur.color }}></i>{cur.title}</h3>
+                <div className="muted">{quad(cur.x, cur.y)} · Economic {cur.x} · Social {cur.y}</div>
+                {cur.desc && <p>{cur.desc}</p>}
+              </>
+            ) : <p className="muted">Click the chart to drop a pin, or select one to see details.</p>}
+          </footer>
+        </main>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<PolCompApp />);
+</script>
+</body>
+</html>
